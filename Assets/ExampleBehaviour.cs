@@ -37,6 +37,11 @@ public class ExampleBehaviour : MonoBehaviour
         }
     }
 
+    public string text()
+    {
+        return "some text";
+    }
+
     [ProfileSample]
     public void Other2()
     {

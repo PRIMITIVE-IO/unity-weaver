@@ -4,6 +4,8 @@ using Mono.Cecil;
 using UnityEngine;
 using Mono.Cecil.Cil;
 using Weaver.Extensions;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
+using Object = UnityEngine.Object;
 
 namespace Weaver
 {
@@ -12,6 +14,7 @@ namespace Weaver
         MethodReference m_GetGameObjectMethodRef;
         MethodReference m_GetObjectInstanceId;
         MethodReference m_DebugLogMethodRef;
+        private ModuleDefinition moduleDefinition;
 
         public override string ComponentName => "Profile Sample";
 
@@ -19,6 +22,7 @@ namespace Weaver
 
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
+            this.moduleDefinition = moduleDefinition;
             // Get the Component.gameObject property so that it can be retrieved
             TypeReference componentTypeRef = moduleDefinition.ImportReference(typeof(Component));
             TypeDefinition componentTypeDef = componentTypeRef.Resolve();
@@ -58,15 +62,22 @@ namespace Weaver
             // Inject at the start of the function
             // see: https://en.wikipedia.org/wiki/List_of_CIL_instructions
             {
+                MethodDefinition textMethod = methodDefinition.DeclaringType.GetMethod("text");
+                MethodReference textMethodRef = moduleDefinition.ImportReference(textMethod);
+                
                 List<Instruction> preEntryInstructions = new()
                 {
                     Instruction.Create(OpCodes.Ldstr, methodName),
-                    Instruction.Create(OpCodes.Call, m_DebugLogMethodRef)
+                    Instruction.Create(OpCodes.Call, m_DebugLogMethodRef),
+                    
+                    Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.text()' method
+                    Instruction.Create(OpCodes.Callvirt, textMethodRef),
+                    Instruction.Create(OpCodes.Call, m_DebugLogMethodRef), // prints text returned by `text()` method
                 };
 
                 Instruction firstInstruction = preEntryInstructions.First();
                 Instruction lastInserted = firstInstruction;
-                
+
                 bodyProcessor.InsertBefore(body.Instructions.First(), firstInstruction);
                 for (int ii = 1; ii < preEntryInstructions.Count; ii++)
                 {
@@ -75,7 +86,7 @@ namespace Weaver
                     lastInserted = toInsert;
                 }
             }
-            
+
             // [Normal part of function]
 
             // Inject at the end
@@ -90,7 +101,7 @@ namespace Weaver
 
                 Instruction firstInstruction = exitInstructions.First();
                 Instruction lastInserted = firstInstruction;
-                
+
                 bodyProcessor.InsertBefore(body.Instructions.Last(), firstInstruction);
                 for (int ii = 1; ii < exitInstructions.Count; ii++)
                 {
