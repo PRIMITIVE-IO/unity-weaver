@@ -4,11 +4,15 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using Weaver.Editor.Settings;
+using Weaver.Editor.Utility_Types;
+using Weaver.Editor.Utility_Types.Logging;
+using Weaver.Editor.Utility_Types.Reflected_Members;
 
-namespace Weaver.Editors
+namespace Weaver.Editor.Inspectors
 {
     [CustomEditor(typeof(WeaverSettings))]
-    public class WeaverSettingsEditor : Editor
+    public class WeaverSettingsEditor : UnityEditor.Editor
     {
         public class Styles
         {

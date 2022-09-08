@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using JetBrains.Annotations;
-using Debug = UnityEngine.Debug;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Logging
 {
     [Serializable]
     public class Log

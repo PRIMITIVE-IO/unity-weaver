@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Weaver
+namespace Weaver.Attributes
 {
     /// <summary>
     /// When put above a method and Weaver has this option
@@ -8,7 +8,7 @@ namespace Weaver
     /// at the start of the function and <see cref="UnityEngine.Profiling.Profiler.EndSample()"/> and the 
     /// end. This will then output the result.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false, Inherited = true)]
     public class ProfileSampleAttribute : Attribute
     {
     }

@@ -1,10 +1,8 @@
-﻿using UnityEngine;
-using UnityEditor;
-using System.Collections;
-using UnityEditor.Callbacks;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Collections.Generic;
-namespace Weaver
+using UnityEditor;
+
+namespace Weaver.Editor
 {
     [InitializeOnLoad]
     public static class AssemblyPosprocessor

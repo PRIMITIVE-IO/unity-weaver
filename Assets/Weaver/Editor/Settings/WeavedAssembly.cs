@@ -2,7 +2,7 @@
 using System.IO;
 using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     /// <summary>
     /// Keeps track of the assembly path and if the

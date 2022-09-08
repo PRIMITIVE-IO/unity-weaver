@@ -1,9 +1,9 @@
-﻿using Mono.Cecil;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Mono.Cecil;
 
-namespace Weaver
+namespace Weaver.Editor.Resolver
 {
     /// <summary>
     /// Used to resolve any references to assemblies that are current in the unity 

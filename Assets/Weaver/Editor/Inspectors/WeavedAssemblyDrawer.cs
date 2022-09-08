@@ -1,10 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
+using Weaver.Editor.Settings;
 
-namespace Weaver.Editors
+namespace Weaver.Editor.Inspectors
 {
     [CustomPropertyDrawer(typeof(WeavedAssembly))]
     public class WeavedAssemblyDrawer : PropertyDrawer

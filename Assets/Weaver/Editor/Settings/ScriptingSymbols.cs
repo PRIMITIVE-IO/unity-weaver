@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     [Serializable]
     public struct ScriptingSymbols

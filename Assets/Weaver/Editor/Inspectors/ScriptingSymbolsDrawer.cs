@@ -1,7 +1,8 @@
 ﻿using UnityEditor;
 using UnityEngine;
+using Weaver.Editor.Settings;
 
-namespace Weaver
+namespace Weaver.Editor.Inspectors
 {
     [CustomPropertyDrawer(typeof(ScriptingSymbols))]
     public class ScriptingSymbolsEditor : PropertyDrawer

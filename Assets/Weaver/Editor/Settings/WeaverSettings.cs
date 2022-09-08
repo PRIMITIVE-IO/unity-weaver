@@ -1,18 +1,20 @@
-﻿using JetBrains.Annotations;
-using Mono.Cecil;
-using Mono.Cecil.Pdb;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using JetBrains.Annotations;
+using Mono.Cecil;
+using Mono.Cecil.Pdb;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.Compilation;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Weaver.Editor.Resolver;
+using Weaver.Editor.Utility_Types.Logging;
 using Object = UnityEngine.Object;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     [CreateAssetMenu(menuName = "Weaver/Settings", fileName = "Weaver Settings")]
     public class WeaverSettings : ScriptableObject, ILogable

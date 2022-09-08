@@ -1,11 +1,13 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditorInternal;
-using System;
-using System.Collections.Generic;
+using UnityEngine;
+using Weaver.Editor.Settings;
+using Weaver.Editor.Utility_Types.Reflected_Members;
 using Object = UnityEngine.Object;
 
-namespace Weaver.Editors
+namespace Weaver.Editor.Inspectors
 {
     [CustomPropertyDrawer(typeof(ComponentController))]
     public class ComponentControllerDrawer : PropertyDrawer

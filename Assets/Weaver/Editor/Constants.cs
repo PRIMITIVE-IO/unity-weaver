@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor
 {
     [InitializeOnLoad]
     class Constants

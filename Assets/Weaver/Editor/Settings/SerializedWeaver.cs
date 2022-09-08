@@ -1,9 +1,8 @@
-﻿using UnityEngine;
-using UnityEditor;
+﻿using System.IO;
 using UnityEditorInternal;
-using System.IO;
+using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     // TODO: Make scriptable singleton
     public abstract class SerializedWeaver<T> : ScriptableObject where T : SerializedWeaver<T>

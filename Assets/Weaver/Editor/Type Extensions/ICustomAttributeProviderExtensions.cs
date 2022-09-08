@@ -1,9 +1,9 @@
-﻿using Mono.Cecil;
-using Mono.Collections.Generic;
-using System;
+﻿using System;
 using System.Linq;
+using Mono.Cecil;
+using Mono.Collections.Generic;
 
-namespace Weaver.Extensions
+namespace Weaver.Editor.Type_Extensions
 {
     public static class ICustomAttributeProviderExtensions
     {

@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
 using System.Diagnostics;
 using System.Linq;
-using Weaver.Extensions;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Weaver.Attributes;
+using Weaver.Editor.Type_Extensions;
 using Debug = UnityEngine.Debug;
 
-namespace Weaver
+namespace Weaver.Editor.Components
 {
     public class MethodTimerComponent : WeaverComponent
     {

@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Logging
 {
     public interface ILogable
     {

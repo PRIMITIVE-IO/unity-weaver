@@ -6,8 +6,9 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using Weaver.Editor.Utility_Types;
 
-namespace Weaver
+namespace Weaver.Editor
 {
     public class AssemblyUtility
     {

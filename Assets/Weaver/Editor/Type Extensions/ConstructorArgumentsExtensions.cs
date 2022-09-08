@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Mono.Cecil;
 
-namespace Weaver.Extensions
+namespace Weaver.Editor.Type_Extensions
 {
     public static class ConstructorArguments
     {

@@ -1,8 +1,8 @@
-﻿using Mono.Cecil;
-using System;
-using Weaver.Extensions;
+﻿using System;
+using Mono.Cecil;
+using Weaver.Editor.Type_Extensions;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Implementations
 {
     public struct TypeImplementation
     {

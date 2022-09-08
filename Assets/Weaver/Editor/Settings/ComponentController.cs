@@ -1,8 +1,10 @@
 ﻿using Mono.Cecil;
 using Mono.Collections.Generic;
 using UnityEngine;
+using Weaver.Editor.Utility_Types;
+using Weaver.Editor.Utility_Types.Logging;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     [System.Serializable]
     public class ComponentController : SubObjectController<WeaverComponent>

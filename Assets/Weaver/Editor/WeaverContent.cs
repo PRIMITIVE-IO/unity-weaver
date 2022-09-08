@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor
 {
     public static class WeaverContent
     {

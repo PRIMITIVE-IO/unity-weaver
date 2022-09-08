@@ -1,10 +1,13 @@
 ﻿using System;
-using UnityEngine;
-using Mono.Cecil;
 using System.Reflection;
+using Mono.Cecil;
+using UnityEngine;
+using Weaver.Editor.Settings;
+using Weaver.Editor.Utility_Types;
+using Weaver.Editor.Utility_Types.Logging;
 using Object = UnityEngine.Object;
 
-namespace Weaver
+namespace Weaver.Editor
 {
     [Flags]
     public enum DefinitionType

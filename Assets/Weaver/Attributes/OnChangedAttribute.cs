@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Weaver
+namespace Weaver.Attributes
 {
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
     public class OnChangedAttribute : Attribute

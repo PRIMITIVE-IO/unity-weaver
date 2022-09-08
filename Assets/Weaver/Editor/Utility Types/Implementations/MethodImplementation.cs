@@ -1,6 +1,6 @@
 ﻿using Mono.Cecil;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Implementations
 {
     public struct MethodImplementation
     {

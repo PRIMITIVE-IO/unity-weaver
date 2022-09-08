@@ -1,9 +1,11 @@
 ﻿using System;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Weaver.Extensions;
+using Weaver.Attributes;
+using Weaver.Editor.Type_Extensions;
+using Weaver.Editor.Utility_Types;
 
-namespace Weaver
+namespace Weaver.Editor.Components
 {
     public class PropertyChangedComponent : WeaverComponent
     {

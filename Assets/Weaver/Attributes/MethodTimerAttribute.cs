@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Weaver
+namespace Weaver.Attributes
 {
     /// <summary>
     /// Based off of https://github.com/Fody/MethodTimer
