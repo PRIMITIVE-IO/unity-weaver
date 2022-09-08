@@ -2,9 +2,9 @@
 using UnityEngine;
 using Weaver.Attributes;
 
+[ProfileSample]
 public class ExampleBehaviour : MonoBehaviour
 {
-    [ProfileSample]
     void Other()
     {
         long count = 0;
@@ -13,8 +13,7 @@ public class ExampleBehaviour : MonoBehaviour
             count++;
         }
     }
-
-    [ProfileSample]
+    
     void Other2()
     {
         long count = 0;
@@ -24,7 +23,6 @@ public class ExampleBehaviour : MonoBehaviour
         }
     }
     
-    [ProfileSample]
     void Start()
     {
         Other();

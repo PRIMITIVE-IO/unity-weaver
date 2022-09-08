@@ -8,7 +8,7 @@ namespace Weaver.Attributes
     /// at the start of the function and <see cref="UnityEngine.Profiling.Profiler.EndSample()"/> and the 
     /// end. This will then output the result.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
     public class ProfileSampleAttribute : Attribute
     {
     }

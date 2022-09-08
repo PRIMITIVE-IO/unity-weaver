@@ -17,6 +17,7 @@ namespace Weaver.Editor.Components
 
         public override DefinitionType AffectedDefinitions => DefinitionType.Module | DefinitionType.Method;
 
+        bool skip = true;
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
             // get reference to Debug.Log so that it can be called in the opcode with a string argument
@@ -28,12 +29,13 @@ namespace Weaver.Editor.Components
 
         public override void VisitType(TypeDefinition typeDefinition)
         {
-            
+            skip = CheckSkip(typeDefinition);
         }
 
         public override void VisitMethod(MethodDefinition methodDefinition)
         {
-            if (CheckSkip(methodDefinition)) return;
+            if (methodDefinition.Name == "GetInstanceIDs") return;
+            if (skip) return;
             bool isMonobehaviour = CheckMonoBehaviour(methodDefinition.DeclaringType);
 
             string methodName = $"{methodDefinition.DeclaringType.Name}.{methodDefinition.Name}";
@@ -95,16 +97,15 @@ namespace Weaver.Editor.Components
             }
         }
         
-        static bool CheckSkip(IMemberDefinition memberDefinition)
+        static bool CheckSkip(TypeDefinition typeDefinition)
         {
-            TypeDefinition typeDefinition = memberDefinition.DeclaringType;
             if (typeDefinition.Namespace.StartsWith("Weaver"))
             {
                 // don't trace self
                 return true;
             }
             
-            CustomAttribute profileSample = memberDefinition.GetCustomAttribute<ProfileSampleAttribute>();
+            CustomAttribute profileSample = typeDefinition.GetCustomAttribute<ProfileSampleAttribute>();
 
             // Check if we have our attribute
             if (profileSample == null)
@@ -112,7 +113,7 @@ namespace Weaver.Editor.Components
                 return true;
             }
 
-            memberDefinition.CustomAttributes.Remove(profileSample);
+            typeDefinition.CustomAttributes.Remove(profileSample);
             return false;
         }
 

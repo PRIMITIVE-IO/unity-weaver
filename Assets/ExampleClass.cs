@@ -2,16 +2,15 @@ using Weaver.Attributes;
 
 namespace DefaultNamespace
 {
+    [ProfileSample]
     public class ExampleClass
     {
-        [ProfileSample]
         public ExampleClass()
         {
             Other();
             Other2();
         }
         
-        [ProfileSample]
         void Other()
         {
             long count = 0;
@@ -21,7 +20,6 @@ namespace DefaultNamespace
             }
         }
 
-        [ProfileSample]
         void Other2()
         {
             long count = 0;
