@@ -2,7 +2,6 @@
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using UnityEngine;
 using Weaver.Attributes;
 using Weaver.Editor.Type_Extensions;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
@@ -21,10 +20,10 @@ namespace Weaver.Editor.Components
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
             // get reference to Debug.Log so that it can be called in the opcode with a string argument
-            TypeReference debugTypeRef = moduleDefinition.ImportReference(typeof(Debug));
+            TypeReference debugTypeRef = moduleDefinition.ImportReference(typeof(PrimitiveTracer));
             TypeDefinition debugTypeDef = debugTypeRef.Resolve();
             m_DebugLogMethodRef = moduleDefinition.ImportReference(
-                debugTypeDef.GetMethod("Log", 1));
+                debugTypeDef.GetMethod("Trace", 2));
         }
 
         public override void VisitType(TypeDefinition typeDefinition)
@@ -39,10 +38,7 @@ namespace Weaver.Editor.Components
             bool isMonobehaviour = CheckMonoBehaviour(methodDefinition.DeclaringType);
 
             string methodName = $"{methodDefinition.DeclaringType.Name}.{methodDefinition.Name}";
-            
-            MethodDefinition instanceIdMethodDef = methodDefinition.DeclaringType.GetMethod("GetInstanceIDs");
-            MethodReference instanceIdMethodRef = methodDefinition.Module.ImportReference(instanceIdMethodDef);
-            
+
             // get body and processor for code injection
             MethodBody body = methodDefinition.Body;
             ILProcessor bodyProcessor = body.GetILProcessor();
@@ -52,11 +48,8 @@ namespace Weaver.Editor.Components
             {
                 List<Instruction> preEntryInstructions = new()
                 {
-                    Instruction.Create(OpCodes.Ldstr, methodName),
-                    Instruction.Create(OpCodes.Call, m_DebugLogMethodRef),
-                    
                     Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
-                    Instruction.Create(OpCodes.Callvirt, instanceIdMethodRef),
+                    Instruction.Create(OpCodes.Ldstr, methodName),
                     Instruction.Create(OpCodes.Call, m_DebugLogMethodRef), // prints text returned by `GetInstanceIDs()` method
                 };
 
