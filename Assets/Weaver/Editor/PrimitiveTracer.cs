@@ -351,7 +351,7 @@ namespace Weaver.Editor
                         cmd.CreateParameter();
                     classNameParameter.DbType = DbType.String;
                     classNameParameter.ParameterName = "@LocClassName";
-                    classNameParameter.Value = stackElement.ContainmentParent.ShortName;
+                    classNameParameter.Value = ((ClassName)stackElement.ContainmentParent).FullyQualifiedName;
                     cmd.Parameters.Add(classNameParameter);
 
                     IDbDataParameter methodNameParameter =
@@ -419,7 +419,7 @@ namespace Weaver.Editor
                         cmd.CreateParameter();
                     referenceTypeParameter.DbType = DbType.String;
                     referenceTypeParameter.ParameterName = "@ReferenceType";
-                    referenceTypeParameter.Value = $"L{stackEntry.MethodName.ContainmentParent.ShortName};";
+                    referenceTypeParameter.Value = $"L{((ClassName)stackEntry.MethodName.ContainmentParent).FullyQualifiedName};";
                     cmd.Parameters.Add(referenceTypeParameter);
 
                     cmd.ExecuteNonQuery();
