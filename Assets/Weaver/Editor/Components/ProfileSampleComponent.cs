@@ -39,8 +39,9 @@ namespace Weaver.Editor.Components
         {
             if (skip) return;
 
-            string methodName = $"{methodDefinition.DeclaringType.Name}.{methodDefinition.Name}";
-
+            MethodName methodName = MethodNameFromDefinition(methodDefinition);
+            methodName.IsStatic = methodDefinition.IsStatic;
+                
             // get body and processor for code injection
             MethodBody body = methodDefinition.Body;
             ILProcessor bodyProcessor = body.GetILProcessor();
@@ -51,7 +52,7 @@ namespace Weaver.Editor.Components
                 List<Instruction> preEntryInstructions = new()
                 {
                     Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
-                    Instruction.Create(OpCodes.Ldstr, methodName),
+                    Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
                     Instruction.Create(OpCodes.Call, onEntryMethodRef)
                 };
 
@@ -74,8 +75,8 @@ namespace Weaver.Editor.Components
                 List<Instruction> exitInstructions = new()
                 {
                     Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
-                    Instruction.Create(OpCodes.Ldstr, methodName),
-                    Instruction.Create(OpCodes.Call, onEntryMethodRef),
+                    Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
+                    Instruction.Create(OpCodes.Call, onExitMethodRef),
                     // .....
                     Instruction.Create(OpCodes.Ret)
                 };
@@ -91,6 +92,23 @@ namespace Weaver.Editor.Components
                     lastInserted = toInsert;
                 }
             }
+        }
+        
+        static MethodName MethodNameFromDefinition(MethodDefinition methodDefinition)
+        {
+            string classFqn = methodDefinition.DeclaringType.Name;
+            string namespaceName = methodDefinition.DeclaringType.Namespace;
+
+            ClassName parentClass = new ClassName(
+                new FileName(""),
+                new PackageName(namespaceName),
+                classFqn);
+            MethodName methodName = new MethodName(
+                parentClass,
+                methodDefinition.Name,
+                methodDefinition.ReturnType.Name,
+                methodDefinition.Parameters.Select(x => new Argument(x.Name, TypeName.For(x.ParameterType.Name))));
+            return methodName;
         }
         
         static bool CheckSkip(TypeDefinition typeDefinition)

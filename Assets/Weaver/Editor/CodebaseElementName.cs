@@ -92,6 +92,7 @@ namespace Weaver.Editor
         public override CodebaseElementName ContainmentParent => containmentParent;
         readonly CodebaseElementName containmentParent;
 
+        public bool IsStatic;
 
         public readonly string ReturnType;
 
@@ -127,9 +128,8 @@ namespace Weaver.Editor
         {
             ClassName? parentClass = containmentParent as ClassName;
             string parentFqn = parentClass?.FullyQualifiedName ?? containmentParent.ShortName;
-            return $"{parentFqn}.{ShortName}({CommaSeparatedArguments(false)})";
+            return $"{parentFqn}|{ShortName}|{ReturnType}|{CommaSeparatedArguments(false)}|{IsStatic}";
         }
-
 
         string GetArgumentType(Argument argument)
         {
@@ -150,8 +150,8 @@ namespace Weaver.Editor
             Func<Argument, string> argsWithNamesFunc = argument => $"{argument.Name} {GetArgumentType(argument)}";
 
             Func<Argument, string> argFunction = includeArgNames ? argsWithNamesFunc : argsWithoutNamesFunc;
-
-            return "";
+            
+            return string.Join(",", Arguments.Select(argFunction).ToList());
         }
     }
 

@@ -9,6 +9,7 @@ using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using Mono.Data.Sqlite;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
 namespace Weaver.Editor
@@ -38,13 +39,18 @@ namespace Weaver.Editor
         }
 
         [PublicAPI]
-        public static void OnEntry(object traceObject, string methodNameString)
+        public static void OnEntry(object traceObject, string methodDefinition)
         {
-            MethodName methodName = MethodNameFromString(methodNameString);
-            long classInstanceId = InstanceIdFrom(traceObject);
+            MethodName methodName = FromFQN(methodDefinition);
+            long classInstanceId = -1;
+            if (!methodName.IsStatic)
+            {
+                classInstanceId = InstanceIdFrom(traceObject);
+            }
+
             int threadId = Environment.CurrentManagedThreadId;
 
-            Console.WriteLine($"Entering Method {methodName.ShortName} on {classInstanceId} on thread {threadId}");
+            Debug.Log($"Entering Method {methodName.ShortName} on {classInstanceId} on thread {threadId}");
             PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
 
             callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
@@ -63,10 +69,14 @@ namespace Weaver.Editor
         }
 
         [PublicAPI]
-        public static void OnExit(object traceObject, string methodNameString)
+        public static void OnExit(object traceObject, string methodDefinition)
         {
-            MethodName methodName = MethodNameFromString(methodNameString);
-            long classInstanceId = InstanceIdFrom(traceObject);
+            MethodName methodName = FromFQN(methodDefinition);
+            long classInstanceId = -1;
+            if (!methodName.IsStatic)
+            {
+                InstanceIdFrom(traceObject);
+            }
 
             int threadId = Environment.CurrentManagedThreadId;
 
@@ -93,29 +103,6 @@ namespace Weaver.Editor
             }
         }
 
-        static MethodName MethodNameFromString(string methodNameString)
-        {
-            string classFqn = methodNameString[..methodNameString.LastIndexOf('.')];
-            string classNameShort = classFqn;
-            string namespaceName = "";
-            if (classFqn.Contains('.'))
-            {
-                classNameShort = classFqn[(classFqn.IndexOf('.') + 1)..];
-                namespaceName = classFqn[..classFqn.IndexOf('.')];
-            }
-
-            ClassName parentClass = new ClassName(
-                new FileName(""),
-                new PackageName(namespaceName),
-                classNameShort);
-            MethodName methodName = new MethodName(
-                parentClass,
-                methodNameString,
-                "()L;",
-                new List<Argument>());
-            return methodName;
-        }
-
         static long InstanceIdFrom(object traceObject)
         {
             bool isNotUnityManaged = true;
@@ -139,6 +126,32 @@ namespace Weaver.Editor
             }
 
             return classInstanceId;
+        }
+        
+        static MethodName FromFQN(string methodFqn)
+        {
+            string[] split = methodFqn.Split('|');
+            string classFqn = split[0];
+            string namespaceName = "";
+            if (classFqn.Contains('.'))
+            {
+                namespaceName = classFqn[..classFqn.LastIndexOf('.')];
+                classFqn = classFqn[(classFqn.LastIndexOf('.') + 1)..];
+            }
+
+            ClassName parentClass = new ClassName(
+                new FileName(""),
+                new PackageName(namespaceName),
+                classFqn);
+            MethodName methodName = new MethodName(
+                parentClass,
+                split[1],
+                split[2],
+                new List<Argument>());
+
+            methodName.IsStatic = bool.Parse(split[4]);
+            
+            return methodName;
         }
 
         class PrimitiveStackEntry
