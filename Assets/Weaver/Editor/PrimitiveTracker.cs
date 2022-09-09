@@ -21,11 +21,11 @@ namespace Weaver.Editor
         /// </summary>
         static readonly ObjectIDGenerator objectIDGenerator = new();
 
-        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(@"C:\Users\john\Desktop\out.db");
+        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(DbDefaultPath);
 
         static readonly Dictionary<int, List<PrimitiveStackEntry>?> callStacksByThreadId = new();
 
-        static Stopwatch sw = Stopwatch.StartNew();
+        static readonly Stopwatch sw = Stopwatch.StartNew();
 
         static string DbDefaultPath
         {
@@ -127,7 +127,7 @@ namespace Weaver.Editor
 
             return classInstanceId;
         }
-        
+
         static MethodName FromFQN(string methodFqn)
         {
             string[] split = methodFqn.Split('|');
@@ -150,7 +150,7 @@ namespace Weaver.Editor
                 new List<Argument>());
 
             methodName.IsStatic = bool.Parse(split[4]);
-            
+
             return methodName;
         }
 
@@ -419,7 +419,8 @@ namespace Weaver.Editor
                         cmd.CreateParameter();
                     referenceTypeParameter.DbType = DbType.String;
                     referenceTypeParameter.ParameterName = "@ReferenceType";
-                    referenceTypeParameter.Value = $"L{((ClassName)stackEntry.MethodName.ContainmentParent).FullyQualifiedName};";
+                    referenceTypeParameter.Value =
+                        $"L{((ClassName)stackEntry.MethodName.ContainmentParent).FullyQualifiedName};";
                     cmd.Parameters.Add(referenceTypeParameter);
 
                     cmd.ExecuteNonQuery();
