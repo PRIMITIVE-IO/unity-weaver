@@ -27,25 +27,6 @@ namespace Weaver.Editor
 
         public abstract CodebaseElementName? ContainmentParent { get; }
 
-        /// <summary>
-        /// The branch (i.e. version of the code) that this name belongs to.
-        /// 
-        /// This is re-assignable. 
-        /// </summary>
-
-        public string BranchName { get; set; }
-
-        /// <summary>
-        /// An element is also considered to contain itself.
-        /// </summary>
-        public bool IsContainedIn(CodebaseElementName container)
-        {
-            if (this == container) return true;
-
-            return ContainmentParent != null &&
-                   ContainmentParent.IsContainedIn(container);
-        }
-
         protected CodebaseElementName(string shortName)
         {
             ShortName = shortName;
@@ -154,47 +135,7 @@ namespace Weaver.Editor
             return string.Join(",", Arguments.Select(argFunction).ToList());
         }
     }
-
-
-    public sealed class FieldName : CodebaseElementName
-    {
-        public override CodebaseElementName ContainmentParent => containmentParent;
-        readonly CodebaseElementName containmentParent;
-
-
-        public readonly string FieldType;
-
-        string? _fullyQualifiedName;
-
-        public string FullyQualifiedName
-        {
-            get { return _fullyQualifiedName ??= FullyQualified(); }
-        }
-
-        public FieldName(ClassName containmentClass, string fieldName, string fieldType) : base(fieldName)
-        {
-            containmentParent = containmentClass;
-            FieldType = fieldType;
-
-            hashCode = ContainmentParent.GetHashCode() + (ShortName + FieldType).GetHashCode();
-        }
-
-
-        FieldName(ClassName containmentClass, string fieldName, string fieldType,
-            bool extra) : base(fieldName)
-        {
-            containmentParent = containmentClass;
-            FieldType = fieldType;
-        }
-
-        string FullyQualified()
-        {
-            ClassName? parentClass = containmentParent as ClassName;
-            string parentFqn = parentClass?.FullyQualifiedName ?? containmentParent.ShortName;
-            return $"{parentFqn}.{ShortName}";
-        }
-    }
-
+    
     #endregion
 
     #region TYPES
@@ -341,30 +282,6 @@ namespace Weaver.Editor
             hashCode = ContainmentParent.GetHashCode() + originalClassName.GetHashCode();
         }
 
-        public ClassName(
-            FileName containmentFile,
-            PackageName containmentPackage,
-            ClassName? parentClass,
-            string shortName,
-            string fqn
-        ) : base(shortName)
-        {
-            this.containmentFile = containmentFile;
-            ContainmentPackage = containmentPackage;
-            IsOuterClass = parentClass == null;
-            ParentClass = parentClass;
-            originalClassName = shortName;
-            _fullyQualifiedName = fqn;
-        }
-
-
-        ClassName(FileName containmentFile, PackageName containmentPackage, string className, bool extra)
-            : base(GetShortName(className))
-        {
-            this.containmentFile = containmentFile;
-            ContainmentPackage = containmentPackage;
-        }
-
         static string GetShortName(string className)
         {
             if (!string.IsNullOrEmpty(className) && className.Contains('$'))
@@ -375,7 +292,6 @@ namespace Weaver.Editor
 
             return className;
         }
-
 
         string FullyQualified()
         {
@@ -397,7 +313,6 @@ namespace Weaver.Editor
     public sealed class FileName : CodebaseElementName
     {
         public override CodebaseElementName ContainmentParent { get; }
-
 
         public readonly string FilePath;
 

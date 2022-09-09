@@ -18,6 +18,8 @@ namespace Weaver.Editor.Components
         public override DefinitionType AffectedDefinitions => DefinitionType.Module | DefinitionType.Method;
 
         bool skip = true;
+        bool isMonoBehaviour = false;
+        
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
             // get reference to Debug.Log so that it can be called in the opcode with a string argument
@@ -33,11 +35,14 @@ namespace Weaver.Editor.Components
         public override void VisitType(TypeDefinition typeDefinition)
         {
             skip = CheckSkip(typeDefinition);
+            isMonoBehaviour = CheckMonoBehaviour(typeDefinition);
         }
 
         public override void VisitMethod(MethodDefinition methodDefinition)
         {
             if (skip) return;
+
+            if (isMonoBehaviour && methodDefinition.Name == ".ctor") return; // don't ever record MonoBehaviour constructors -> they run on recompile
 
             MethodName methodName = MethodNameFromDefinition(methodDefinition);
             methodName.IsStatic = methodDefinition.IsStatic;
@@ -96,16 +101,21 @@ namespace Weaver.Editor.Components
         
         static MethodName MethodNameFromDefinition(MethodDefinition methodDefinition)
         {
-            string classFqn = methodDefinition.DeclaringType.Name;
+            string methodNameString = methodDefinition.Name;
+            string classNameString = methodDefinition.DeclaringType.Name;
+            if (methodNameString == ".ctor")
+            {
+                methodNameString = classNameString;
+            }
             string namespaceName = methodDefinition.DeclaringType.Namespace;
 
             ClassName parentClass = new ClassName(
                 new FileName(""),
                 new PackageName(namespaceName),
-                classFqn);
+                classNameString);
             MethodName methodName = new MethodName(
                 parentClass,
-                methodDefinition.Name,
+                methodNameString,
                 methodDefinition.ReturnType.Name,
                 methodDefinition.Parameters.Select(x => new Argument(x.Name, TypeName.For(x.ParameterType.Name))));
             return methodName;
@@ -129,6 +139,25 @@ namespace Weaver.Editor.Components
 
             typeDefinition.CustomAttributes.Remove(profileSample);
             return false;
+        }
+        
+        static bool CheckMonoBehaviour(TypeDefinition typeDefinition)
+        {
+            while (true)
+            {
+                TypeDefinition baseDef = typeDefinition.BaseType?.Resolve();
+                if (baseDef == null)
+                {
+                    return false;
+                }
+
+                if (baseDef.Name == "MonoBehaviour")
+                {
+                    return true;
+                }
+
+                typeDefinition = baseDef;
+            }
         }
     }
 }

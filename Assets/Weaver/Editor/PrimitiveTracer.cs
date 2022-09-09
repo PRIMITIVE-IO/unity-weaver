@@ -21,7 +21,7 @@ namespace Weaver.Editor
         /// </summary>
         static readonly ObjectIDGenerator objectIDGenerator = new();
 
-        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(DbDefaultPath);
+        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(@"C:\Users\john\Desktop\out.db");
 
         static readonly Dictionary<int, List<PrimitiveStackEntry>?> callStacksByThreadId = new();
 
