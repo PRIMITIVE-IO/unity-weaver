@@ -10,7 +10,8 @@ namespace Weaver.Editor.Components
 {
     public class ProfileSampleComponent : WeaverComponent
     {
-        MethodReference m_DebugLogMethodRef;
+        MethodReference onEntryMethodRef;
+        MethodReference onExitMethodRef;
 
         public override string ComponentName => "Profile Sample";
 
@@ -20,10 +21,13 @@ namespace Weaver.Editor.Components
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
             // get reference to Debug.Log so that it can be called in the opcode with a string argument
-            TypeReference debugTypeRef = moduleDefinition.ImportReference(typeof(PrimitiveTracer));
-            TypeDefinition debugTypeDef = debugTypeRef.Resolve();
-            m_DebugLogMethodRef = moduleDefinition.ImportReference(
-                debugTypeDef.GetMethod("Trace", 2));
+            TypeReference primitiveTracerRef = moduleDefinition.ImportReference(typeof(PrimitiveTracker));
+            TypeDefinition primitiveTracerDef = primitiveTracerRef.Resolve();
+            onEntryMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnEntry", 2));
+            
+            onExitMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnExit", 2));
         }
 
         public override void VisitType(TypeDefinition typeDefinition)
@@ -33,9 +37,7 @@ namespace Weaver.Editor.Components
 
         public override void VisitMethod(MethodDefinition methodDefinition)
         {
-            if (methodDefinition.Name == "GetInstanceIDs") return;
             if (skip) return;
-            bool isMonobehaviour = CheckMonoBehaviour(methodDefinition.DeclaringType);
 
             string methodName = $"{methodDefinition.DeclaringType.Name}.{methodDefinition.Name}";
 
@@ -50,7 +52,7 @@ namespace Weaver.Editor.Components
                 {
                     Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
                     Instruction.Create(OpCodes.Ldstr, methodName),
-                    Instruction.Create(OpCodes.Call, m_DebugLogMethodRef), // prints text returned by `GetInstanceIDs()` method
+                    Instruction.Create(OpCodes.Call, onEntryMethodRef)
                 };
 
                 Instruction firstInstruction = preEntryInstructions.First();
@@ -71,8 +73,9 @@ namespace Weaver.Editor.Components
             {
                 List<Instruction> exitInstructions = new()
                 {
-                    // .....
-                    // .....
+                    Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
+                    Instruction.Create(OpCodes.Ldstr, methodName),
+                    Instruction.Create(OpCodes.Call, onEntryMethodRef),
                     // .....
                     Instruction.Create(OpCodes.Ret)
                 };
@@ -108,25 +111,6 @@ namespace Weaver.Editor.Components
 
             typeDefinition.CustomAttributes.Remove(profileSample);
             return false;
-        }
-
-        static bool CheckMonoBehaviour(TypeDefinition typeDefinition)
-        {
-            while (true)
-            {
-                TypeDefinition baseDef = typeDefinition.BaseType?.Resolve();
-                if (baseDef == null)
-                {
-                    return false;
-                }
-
-                if (baseDef.Name == "MonoBehaviour")
-                {
-                    return true;
-                }
-
-                typeDefinition = baseDef;
-            }
         }
     }
 }

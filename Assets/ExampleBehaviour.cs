@@ -29,9 +29,4 @@ public class ExampleBehaviour : MonoBehaviour
         Other2();
         ExampleClass exampleClass = new ExampleClass();
     }
-    
-    string GetInstanceIDs()
-    {
-        return $"{GetInstanceID()}:{gameObject.GetInstanceID()}";
-    }
 }
