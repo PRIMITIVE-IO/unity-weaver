@@ -30,6 +30,9 @@ namespace Weaver.Editor
 
         static readonly Stopwatch sw = Stopwatch.StartNew();
 
+        public const bool Verbose = false;
+        public static int EntryCount = 0;
+
         static string DbDefaultPath
         {
             get
@@ -46,7 +49,11 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
-            Debug.Log($"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            if (Verbose)
+            {
+                Debug.Log(
+                    $"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            }
 
             PushStackAndWrite(primitiveStackEntry, threadId);
         }
@@ -56,7 +63,11 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
-            Debug.Log($"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            if (Verbose)
+            {
+                Debug.Log(
+                    $"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            }
 
             PushStackAndWrite(primitiveStackEntry, threadId);
         }
@@ -76,6 +87,12 @@ namespace Weaver.Editor
             primitiveTraceSqliteOutput.InsertThread(threadId, sw.ElapsedMilliseconds);
             primitiveTraceSqliteOutput.InsertStackFrames(stackMethods.ToList());
             primitiveTraceSqliteOutput.InsertObject(stack.ToList());
+
+            EntryCount++;
+            if (EntryCount % 500 == 0)
+            {
+                Debug.Log(EntryCount);
+            }
         }
 
         [PublicAPI]
@@ -83,8 +100,12 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
-            Debug.Log($"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
-            
+            if (Verbose)
+            {
+                Debug.Log(
+                    $"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            }
+
             PopStack(primitiveStackEntry, threadId);
         }
         
@@ -93,8 +114,12 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
-            Debug.Log($"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
-            
+            if (Verbose)
+            {
+                Debug.Log(
+                    $"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            }
+
             PopStack(primitiveStackEntry, threadId);
         }
 

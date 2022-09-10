@@ -17,7 +17,7 @@ namespace DefaultNamespace
                 count++;
             }
         }
-
+        
         void Other2()
         {
             long count = 0;

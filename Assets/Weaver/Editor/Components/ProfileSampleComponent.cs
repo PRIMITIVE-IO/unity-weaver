@@ -21,7 +21,16 @@ namespace Weaver.Editor.Components
 
         bool skip = true;
         bool isMonoBehaviour = false;
-        
+
+        public static readonly HashSet<string> TypesToSkip = new()
+        {
+        };
+
+        public static readonly HashSet<string> MethodsToSkip = new()
+        {
+            "OnValidate"
+        };
+
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
             // get reference to Debug.Log so that it can be called in the opcode with a string argument
@@ -44,7 +53,7 @@ namespace Weaver.Editor.Components
         public override void VisitType(TypeDefinition typeDefinition)
         {
             // don't trace self
-            skip = typeDefinition.Namespace.StartsWith("Weaver"); // don't trace self
+            skip = typeDefinition.Namespace.StartsWith("Weaver") || TypesToSkip.Contains(typeDefinition.FullName);
 
             isMonoBehaviour = CheckMonoBehaviour(typeDefinition);
         }
@@ -55,7 +64,10 @@ namespace Weaver.Editor.Components
 
             if (methodDefinition.Name == ".cctor") return; // don't ever record static constructors
 
-            if (isMonoBehaviour && methodDefinition.Name == ".ctor") return; // don't ever record MonoBehaviour constructors -> they run on recompile
+            // don't ever record MonoBehaviour constructors -> they run on recompile
+            if (isMonoBehaviour && methodDefinition.Name is ".ctor") return;
+
+            if (MethodsToSkip.Contains(methodDefinition.Name)) return;
 
             MethodName methodName = MethodNameFromDefinition(methodDefinition);
 
