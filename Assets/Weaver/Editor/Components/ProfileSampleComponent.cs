@@ -2,7 +2,6 @@
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Weaver.Attributes;
 using Weaver.Editor.Type_Extensions;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 
@@ -34,7 +33,9 @@ namespace Weaver.Editor.Components
 
         public override void VisitType(TypeDefinition typeDefinition)
         {
-            skip = CheckSkip(typeDefinition);
+            // don't trace self
+            skip = typeDefinition.Namespace.StartsWith("Weaver"); // don't trace self
+
             isMonoBehaviour = CheckMonoBehaviour(typeDefinition);
         }
 
@@ -119,26 +120,6 @@ namespace Weaver.Editor.Components
                 methodDefinition.ReturnType.Name,
                 methodDefinition.Parameters.Select(x => new Argument(x.Name, TypeName.For(x.ParameterType.Name))));
             return methodName;
-        }
-        
-        static bool CheckSkip(TypeDefinition typeDefinition)
-        {
-            if (typeDefinition.Namespace.StartsWith("Weaver"))
-            {
-                // don't trace self
-                return true;
-            }
-            
-            CustomAttribute profileSample = typeDefinition.GetCustomAttribute<ProfileSampleAttribute>();
-
-            // Check if we have our attribute
-            if (profileSample == null)
-            {
-                return true;
-            }
-
-            typeDefinition.CustomAttributes.Remove(profileSample);
-            return false;
         }
         
         static bool CheckMonoBehaviour(TypeDefinition typeDefinition)

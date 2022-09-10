@@ -1,8 +1,5 @@
-using Weaver.Attributes;
-
 namespace DefaultNamespace
 {
-    [ProfileSample]
     public class ExampleClass
     {
         public ExampleClass()

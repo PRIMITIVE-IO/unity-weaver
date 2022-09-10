@@ -1,8 +1,6 @@
-﻿using DefaultNamespace;
+using DefaultNamespace;
 using UnityEngine;
-using Weaver.Attributes;
 
-[ProfileSample]
 public class ExampleBehaviour : MonoBehaviour
 {
     void Other()
