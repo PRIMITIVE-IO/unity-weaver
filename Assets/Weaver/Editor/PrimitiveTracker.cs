@@ -25,7 +25,7 @@ namespace Weaver.Editor
 
         static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(DbDefaultPath);
 
-        static readonly Dictionary<int, List<PrimitiveStackEntry>?> callStacksByThreadId = new();
+        static readonly Dictionary<int, Stack<PrimitiveStackEntry>?> callStacksByThreadId = new();
         static readonly Dictionary<int, string> threadNamesById = new();
 
         static readonly Stopwatch sw = Stopwatch.StartNew();
@@ -63,18 +63,18 @@ namespace Weaver.Editor
 
         static void PushStackAndWrite(PrimitiveStackEntry primitiveStackEntry, int threadId)
         {
-            callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
+            callStacksByThreadId.TryGetValue(threadId, out Stack<PrimitiveStackEntry>? stack);
             if (stack == null)
             {
-                stack = new List<PrimitiveStackEntry>();
+                stack = new Stack<PrimitiveStackEntry>();
                 callStacksByThreadId.Add(threadId, stack);
             }
 
-            stack.Add(primitiveStackEntry);
+            stack.Push(primitiveStackEntry);
             IEnumerable<MethodName> stackMethods = stack.Select(x => x.MethodName);
 
             primitiveTraceSqliteOutput.InsertThread(threadId, sw.ElapsedMilliseconds);
-            primitiveTraceSqliteOutput.InsertStackFrames(stackMethods.Reverse().ToList());
+            primitiveTraceSqliteOutput.InsertStackFrames(stackMethods.ToList());
             primitiveTraceSqliteOutput.InsertObject(stack.ToList());
         }
 
@@ -100,25 +100,13 @@ namespace Weaver.Editor
 
         static void PopStack(PrimitiveStackEntry primitiveStackEntry, int threadId)
         {
-            callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
+            callStacksByThreadId.TryGetValue(threadId, out Stack<PrimitiveStackEntry>? stack);
             if (stack == null) return;
-            int idToRemove = -1;
             int removeHashCode = primitiveStackEntry.GetHashCode();
-            int count = 0;
-            foreach (PrimitiveStackEntry entry in stack)
+            int topHashCode = -1;
+            while (stack.Count > 0 && topHashCode != removeHashCode)
             {
-                if (entry.GetHashCode() == removeHashCode)
-                {
-                    idToRemove = count;
-                    break;
-                }
-
-                count++;
-            }
-
-            if (idToRemove > -1)
-            {
-                stack.RemoveAt(idToRemove);
+                topHashCode = stack.Pop().GetHashCode();
             }
         }
         
@@ -429,7 +417,6 @@ namespace Weaver.Editor
 
             public void InsertObject(List<PrimitiveStackEntry> stack)
             {
-                stack.Reverse();
                 using IDbCommand cmd = conn.CreateCommand();
                 using IDbTransaction transaction = conn.BeginTransaction();
 
