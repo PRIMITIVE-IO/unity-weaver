@@ -53,6 +53,8 @@ namespace Weaver.Editor.Components
         {
             if (skip) return;
 
+            if (methodDefinition.Name == ".cctor") return; // don't ever record static constructors
+
             if (isMonoBehaviour && methodDefinition.Name == ".ctor") return; // don't ever record MonoBehaviour constructors -> they run on recompile
 
             MethodName methodName = MethodNameFromDefinition(methodDefinition);
@@ -74,19 +76,23 @@ namespace Weaver.Editor.Components
                 {
                     preEntryInstructions = new()
                     {
+                        Instruction.Create(OpCodes.Nop),
                         Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
-                        Instruction.Create(OpCodes.Call, onStaticEntryMethodRef)
+                        Instruction.Create(OpCodes.Call, onStaticEntryMethodRef),
+                        Instruction.Create(OpCodes.Nop)
                     };
                 }
                 else
                 {
                     preEntryInstructions = new()
                     {
+                        Instruction.Create(OpCodes.Nop),
                         // Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
                         Instruction.Create(OpCodes.Ldarg_0),
                         // load FQN as second argumment
                         Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
-                        Instruction.Create(OpCodes.Call, onInstanceEntryMethodRef)
+                        Instruction.Create(OpCodes.Call, onInstanceEntryMethodRef),
+                        Instruction.Create(OpCodes.Nop)
                     };
                 }
 
@@ -111,21 +117,23 @@ namespace Weaver.Editor.Components
                 {
                     exitInstructions = new()
                     {
+                        Instruction.Create(OpCodes.Nop),
                         Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
                         Instruction.Create(OpCodes.Call, onStaticExitMethodRef),
-                        Instruction.Create(OpCodes.Ret)
+                        Instruction.Create(OpCodes.Nop)
                     };
                 }
                 else
                 {
                     exitInstructions = new()
                     {
+                        Instruction.Create(OpCodes.Nop),
                         // Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
                         Instruction.Create(OpCodes.Ldarg_0), 
                         // Load FQN as second argument
                         Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
                         Instruction.Create(OpCodes.Call, onInstanceExitMethodRef),
-                        Instruction.Create(OpCodes.Ret)
+                        Instruction.Create(OpCodes.Nop)
                     };
                 }
 

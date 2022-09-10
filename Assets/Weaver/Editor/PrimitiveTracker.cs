@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -22,7 +23,7 @@ namespace Weaver.Editor
         /// </summary>
         static readonly ObjectIDGenerator objectIDGenerator = new();
 
-        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(@"C:\Users\john\Desktop\out.db");
+        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(DbDefaultPath);
 
         static readonly Dictionary<int, List<PrimitiveStackEntry>?> callStacksByThreadId = new();
         static readonly Dictionary<int, string> threadNamesById = new();
@@ -43,50 +44,25 @@ namespace Weaver.Editor
         [PublicAPI]
         public static void OnInstanceEntry(object traceObject, string methodDefinition)
         {
-            MethodName methodName = FromFQN(methodDefinition);
-            long classInstanceId = InstanceIdFrom(traceObject);
-
             int threadId = Environment.CurrentManagedThreadId;
-            if (!threadNamesById.ContainsKey(threadId))
-            {
-                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
-                threadNamesById.Add(threadId, threadName);
-            }
+            PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
+            Debug.Log($"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
 
-            Debug.Log($"Entering Method {methodName.ShortName} on {classInstanceId} on thread {threadId}");
-            PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
-
-            callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
-            if (stack == null)
-            {
-                stack = new List<PrimitiveStackEntry>();
-                callStacksByThreadId.Add(threadId, stack);
-            }
-
-            stack.Add(primitiveStackEntry);
-            IEnumerable<MethodName> stackMethods = stack.Select(x => x.MethodName);
-
-            primitiveTraceSqliteOutput.InsertThread(threadId, sw.ElapsedMilliseconds);
-            primitiveTraceSqliteOutput.InsertStackFrames(stackMethods.Reverse().ToList());
-            primitiveTraceSqliteOutput.InsertObject(stack.ToList());
+            PushStackAndWrite(primitiveStackEntry, threadId);
         }
         
         [PublicAPI]
         public static void OnStaticEntry(string methodDefinition)
         {
-            MethodName methodName = FromFQN(methodDefinition);
-            long classInstanceId = -1;
-
             int threadId = Environment.CurrentManagedThreadId;
-            if (!threadNamesById.ContainsKey(threadId))
-            {
-                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
-                threadNamesById.Add(threadId, threadName);
-            }
+            PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
+            Debug.Log($"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
 
-            Debug.Log($"Entering Method {methodName.ShortName} on {classInstanceId} on thread {threadId}");
-            PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
+            PushStackAndWrite(primitiveStackEntry, threadId);
+        }
 
+        static void PushStackAndWrite(PrimitiveStackEntry primitiveStackEntry, int threadId)
+        {
             callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
             if (stack == null)
             {
@@ -105,17 +81,25 @@ namespace Weaver.Editor
         [PublicAPI]
         public static void OnInstanceExit(object traceObject, string methodDefinition)
         {
-            MethodName methodName = FromFQN(methodDefinition);
-            long classInstanceId = InstanceIdFrom(traceObject);
-
             int threadId = Environment.CurrentManagedThreadId;
-            if (!threadNamesById.ContainsKey(threadId))
-            {
-                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
-                threadNamesById.Add(threadId, threadName);
-            }
+            PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
+            Debug.Log($"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            
+            PopStack(primitiveStackEntry, threadId);
+        }
+        
+        [PublicAPI]
+        public static void OnStaticExit(string methodDefinition)
+        {
+            int threadId = Environment.CurrentManagedThreadId;
+            PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
+            Debug.Log($"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            
+            PopStack(primitiveStackEntry, threadId);
+        }
 
-            PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
+        static void PopStack(PrimitiveStackEntry primitiveStackEntry, int threadId)
+        {
             callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
             if (stack == null) return;
             int idToRemove = -1;
@@ -138,13 +122,15 @@ namespace Weaver.Editor
             }
         }
         
-        [PublicAPI]
-        public static void OnStaticExit(string methodDefinition)
+        static PrimitiveStackEntry EntryFromInfos(object? traceObject, string methodDefinition, int threadId)
         {
             MethodName methodName = FromFQN(methodDefinition);
             long classInstanceId = -1;
+            if (traceObject != null)
+            {
+                classInstanceId = InstanceIdFrom(traceObject);
+            }
 
-            int threadId = Environment.CurrentManagedThreadId;
             if (!threadNamesById.ContainsKey(threadId))
             {
                 string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
@@ -152,26 +138,7 @@ namespace Weaver.Editor
             }
 
             PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
-            callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
-            if (stack == null) return;
-            int idToRemove = -1;
-            int removeHashCode = primitiveStackEntry.GetHashCode();
-            int count = 0;
-            foreach (PrimitiveStackEntry entry in stack)
-            {
-                if (entry.GetHashCode() == removeHashCode)
-                {
-                    idToRemove = count;
-                    break;
-                }
-
-                count++;
-            }
-
-            if (idToRemove > -1)
-            {
-                stack.RemoveAt(idToRemove);
-            }
+            return primitiveStackEntry;
         }
 
         static long InstanceIdFrom(object traceObject)
