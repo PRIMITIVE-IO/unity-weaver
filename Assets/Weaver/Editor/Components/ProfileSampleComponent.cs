@@ -2,6 +2,7 @@
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using UnityEngine;
 using Weaver.Editor.Type_Extensions;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 
@@ -58,6 +59,11 @@ namespace Weaver.Editor.Components
 
             // get body and processor for code injection
             MethodBody body = methodDefinition.Body;
+            if (body == null)
+            {
+                Debug.Log($"Missing body for: {methodDefinition.FullName}");
+                return;
+            }
             ILProcessor bodyProcessor = body.GetILProcessor();
 
             // Inject at the start of the function
@@ -163,18 +169,26 @@ namespace Weaver.Editor.Components
         {
             while (true)
             {
-                TypeDefinition baseDef = typeDefinition.BaseType?.Resolve();
-                if (baseDef == null)
+                try
                 {
+                    TypeDefinition baseDef = typeDefinition.BaseType?.Resolve();
+                    if (baseDef == null)
+                    {
+                        return false;
+                    }
+
+                    if (baseDef.Name == "MonoBehaviour")
+                    {
+                        return true;
+                    }
+
+                    typeDefinition = baseDef;
+                }
+                catch (AssemblyResolutionException e)
+                {
+                    Debug.Log($"Could not resolve MonoBehaviour type: {typeDefinition.FullName} {e.Message}");
                     return false;
                 }
-
-                if (baseDef.Name == "MonoBehaviour")
-                {
-                    return true;
-                }
-
-                typeDefinition = baseDef;
             }
         }
     }
