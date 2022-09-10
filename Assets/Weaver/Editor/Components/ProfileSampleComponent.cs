@@ -9,8 +9,10 @@ namespace Weaver.Editor.Components
 {
     public class ProfileSampleComponent : WeaverComponent
     {
-        MethodReference onEntryMethodRef;
-        MethodReference onExitMethodRef;
+        MethodReference onInstanceEntryMethodRef;
+        MethodReference onInstanceExitMethodRef;
+        MethodReference onStaticEntryMethodRef;
+        MethodReference onStaticExitMethodRef;
 
         public override string ComponentName => "Profile Sample";
 
@@ -24,11 +26,18 @@ namespace Weaver.Editor.Components
             // get reference to Debug.Log so that it can be called in the opcode with a string argument
             TypeReference primitiveTracerRef = moduleDefinition.ImportReference(typeof(PrimitiveTracker));
             TypeDefinition primitiveTracerDef = primitiveTracerRef.Resolve();
-            onEntryMethodRef = moduleDefinition.ImportReference(
-                primitiveTracerDef.GetMethod("OnEntry", 2));
             
-            onExitMethodRef = moduleDefinition.ImportReference(
-                primitiveTracerDef.GetMethod("OnExit", 2));
+            onInstanceEntryMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnInstanceEntry", 2));
+            
+            onInstanceExitMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnInstanceExit", 2));
+            
+            onStaticEntryMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnStaticEntry", 1));
+            
+            onStaticExitMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnStaticExit", 1));
         }
 
         public override void VisitType(TypeDefinition typeDefinition)
@@ -46,8 +55,7 @@ namespace Weaver.Editor.Components
             if (isMonoBehaviour && methodDefinition.Name == ".ctor") return; // don't ever record MonoBehaviour constructors -> they run on recompile
 
             MethodName methodName = MethodNameFromDefinition(methodDefinition);
-            methodName.IsStatic = methodDefinition.IsStatic;
-                
+
             // get body and processor for code injection
             MethodBody body = methodDefinition.Body;
             ILProcessor bodyProcessor = body.GetILProcessor();
@@ -55,12 +63,26 @@ namespace Weaver.Editor.Components
             // Inject at the start of the function
             // see: https://en.wikipedia.org/wiki/List_of_CIL_instructions
             {
-                List<Instruction> preEntryInstructions = new()
+                List<Instruction> preEntryInstructions;
+                if (methodDefinition.IsStatic)
                 {
-                    Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
-                    Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
-                    Instruction.Create(OpCodes.Call, onEntryMethodRef)
-                };
+                    preEntryInstructions = new()
+                    {
+                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
+                        Instruction.Create(OpCodes.Call, onStaticEntryMethodRef)
+                    };
+                }
+                else
+                {
+                    preEntryInstructions = new()
+                    {
+                        // Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
+                        Instruction.Create(OpCodes.Ldarg_0),
+                        // load FQN as second argumment
+                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
+                        Instruction.Create(OpCodes.Call, onInstanceEntryMethodRef)
+                    };
+                }
 
                 Instruction firstInstruction = preEntryInstructions.First();
                 Instruction lastInserted = firstInstruction;
@@ -78,14 +100,28 @@ namespace Weaver.Editor.Components
 
             // Inject at the end
             {
-                List<Instruction> exitInstructions = new()
+                List<Instruction> exitInstructions;
+                if (methodDefinition.IsStatic)
                 {
-                    Instruction.Create(OpCodes.Ldarg_0),// Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
-                    Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
-                    Instruction.Create(OpCodes.Call, onExitMethodRef),
-                    // .....
-                    Instruction.Create(OpCodes.Ret)
-                };
+                    exitInstructions = new()
+                    {
+                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
+                        Instruction.Create(OpCodes.Call, onStaticExitMethodRef),
+                        Instruction.Create(OpCodes.Ret)
+                    };
+                }
+                else
+                {
+                    exitInstructions = new()
+                    {
+                        // Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
+                        Instruction.Create(OpCodes.Ldarg_0), 
+                        // Load FQN as second argument
+                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
+                        Instruction.Create(OpCodes.Call, onInstanceExitMethodRef),
+                        Instruction.Create(OpCodes.Ret)
+                    };
+                }
 
                 Instruction firstInstruction = exitInstructions.First();
                 Instruction lastInserted = firstInstruction;

@@ -73,8 +73,6 @@ namespace Weaver.Editor
         public override CodebaseElementName ContainmentParent => containmentParent;
         readonly CodebaseElementName containmentParent;
 
-        public bool IsStatic;
-
         public readonly string ReturnType;
 
         public readonly IEnumerable<Argument> Arguments;
@@ -109,7 +107,7 @@ namespace Weaver.Editor
         {
             ClassName? parentClass = containmentParent as ClassName;
             string parentFqn = parentClass?.FullyQualifiedName ?? containmentParent.ShortName;
-            return $"{parentFqn}|{ShortName}|{ReturnType}|{CommaSeparatedArguments(false)}|{IsStatic}";
+            return $"{parentFqn}|{ShortName}|{ReturnType}|{CommaSeparatedArguments(false)}";
         }
 
         string GetArgumentType(Argument argument)

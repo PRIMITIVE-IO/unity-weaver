@@ -39,14 +39,36 @@ namespace Weaver.Editor
         }
 
         [PublicAPI]
-        public static void OnEntry(object traceObject, string methodDefinition)
+        public static void OnInstanceEntry(object traceObject, string methodDefinition)
+        {
+            MethodName methodName = FromFQN(methodDefinition);
+            long classInstanceId = InstanceIdFrom(traceObject);
+
+            int threadId = Environment.CurrentManagedThreadId;
+
+            Debug.Log($"Entering Method {methodName.ShortName} on {classInstanceId} on thread {threadId}");
+            PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
+
+            callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
+            if (stack == null)
+            {
+                stack = new List<PrimitiveStackEntry>();
+                callStacksByThreadId.Add(threadId, stack);
+            }
+
+            stack.Add(primitiveStackEntry);
+            IEnumerable<MethodName> stackMethods = stack.Select(x => x.MethodName);
+
+            primitiveTraceSqliteOutput.InsertThread(threadId, sw.ElapsedMilliseconds);
+            primitiveTraceSqliteOutput.InsertStackFrames(stackMethods.Reverse().ToList());
+            primitiveTraceSqliteOutput.InsertObject(stack.ToList());
+        }
+        
+        [PublicAPI]
+        public static void OnStaticEntry(string methodDefinition)
         {
             MethodName methodName = FromFQN(methodDefinition);
             long classInstanceId = -1;
-            if (!methodName.IsStatic)
-            {
-                classInstanceId = InstanceIdFrom(traceObject);
-            }
 
             int threadId = Environment.CurrentManagedThreadId;
 
@@ -69,14 +91,41 @@ namespace Weaver.Editor
         }
 
         [PublicAPI]
-        public static void OnExit(object traceObject, string methodDefinition)
+        public static void OnInstanceExit(object traceObject, string methodDefinition)
+        {
+            MethodName methodName = FromFQN(methodDefinition);
+            long classInstanceId = InstanceIdFrom(traceObject);
+
+            int threadId = Environment.CurrentManagedThreadId;
+
+            PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
+            callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
+            if (stack == null) return;
+            int idToRemove = -1;
+            int removeHashCode = primitiveStackEntry.GetHashCode();
+            int count = 0;
+            foreach (PrimitiveStackEntry entry in stack)
+            {
+                if (entry.GetHashCode() == removeHashCode)
+                {
+                    idToRemove = count;
+                    break;
+                }
+
+                count++;
+            }
+
+            if (idToRemove > -1)
+            {
+                stack.RemoveAt(idToRemove);
+            }
+        }
+        
+        [PublicAPI]
+        public static void OnStaticExit(string methodDefinition)
         {
             MethodName methodName = FromFQN(methodDefinition);
             long classInstanceId = -1;
-            if (!methodName.IsStatic)
-            {
-                InstanceIdFrom(traceObject);
-            }
 
             int threadId = Environment.CurrentManagedThreadId;
 
@@ -148,8 +197,6 @@ namespace Weaver.Editor
                 split[1],
                 split[2],
                 new List<Argument>());
-
-            methodName.IsStatic = bool.Parse(split[4]);
 
             return methodName;
         }

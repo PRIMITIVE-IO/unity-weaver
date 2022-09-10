@@ -4,11 +4,12 @@ namespace DefaultNamespace
     {
         public ExampleClass()
         {
-            Other();
+            Other3();
             Other2();
+            var x = GetNumber1();
         }
         
-        void Other()
+        void Other3()
         {
             long count = 0;
             for (int ii = 0; ii < 100000000; ii++)
@@ -24,6 +25,11 @@ namespace DefaultNamespace
             {
                 count++;
             }
+        }
+
+        static int GetNumber1()
+        {
+            return 1;
         }
     }
 }
