@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Threading;
 using JetBrains.Annotations;
 using Mono.Data.Sqlite;
 using UnityEngine;
@@ -21,9 +22,10 @@ namespace Weaver.Editor
         /// </summary>
         static readonly ObjectIDGenerator objectIDGenerator = new();
 
-        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(DbDefaultPath);
+        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(@"C:\Users\john\Desktop\out.db");
 
         static readonly Dictionary<int, List<PrimitiveStackEntry>?> callStacksByThreadId = new();
+        static readonly Dictionary<int, string> threadNamesById = new();
 
         static readonly Stopwatch sw = Stopwatch.StartNew();
 
@@ -45,6 +47,11 @@ namespace Weaver.Editor
             long classInstanceId = InstanceIdFrom(traceObject);
 
             int threadId = Environment.CurrentManagedThreadId;
+            if (!threadNamesById.ContainsKey(threadId))
+            {
+                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
+                threadNamesById.Add(threadId, threadName);
+            }
 
             Debug.Log($"Entering Method {methodName.ShortName} on {classInstanceId} on thread {threadId}");
             PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
@@ -71,6 +78,11 @@ namespace Weaver.Editor
             long classInstanceId = -1;
 
             int threadId = Environment.CurrentManagedThreadId;
+            if (!threadNamesById.ContainsKey(threadId))
+            {
+                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
+                threadNamesById.Add(threadId, threadName);
+            }
 
             Debug.Log($"Entering Method {methodName.ShortName} on {classInstanceId} on thread {threadId}");
             PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
@@ -97,6 +109,11 @@ namespace Weaver.Editor
             long classInstanceId = InstanceIdFrom(traceObject);
 
             int threadId = Environment.CurrentManagedThreadId;
+            if (!threadNamesById.ContainsKey(threadId))
+            {
+                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
+                threadNamesById.Add(threadId, threadName);
+            }
 
             PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
             callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
@@ -128,6 +145,11 @@ namespace Weaver.Editor
             long classInstanceId = -1;
 
             int threadId = Environment.CurrentManagedThreadId;
+            if (!threadNamesById.ContainsKey(threadId))
+            {
+                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
+                threadNamesById.Add(threadId, threadName);
+            }
 
             PrimitiveStackEntry primitiveStackEntry = new(methodName, classInstanceId);
             callStacksByThreadId.TryGetValue(threadId, out List<PrimitiveStackEntry>? stack);
@@ -156,6 +178,14 @@ namespace Weaver.Editor
         {
             bool isNotUnityManaged = true;
             long classInstanceId = -1;
+            
+            int threadId = Environment.CurrentManagedThreadId;
+            if (!threadNamesById.ContainsKey(threadId))
+            {
+                string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
+                threadNamesById.Add(threadId, threadName);
+            }
+
             if (traceObject is Object traceObjectObject)
             {
                 isNotUnityManaged = false;
@@ -330,7 +360,7 @@ namespace Weaver.Editor
                       thread_id,
                       thread_name,
                       is_current
-                    ) VALUES (@Time, @Timestamp, 2, 1, @ThreadName, 1)";
+                    ) VALUES (@Time, @Timestamp, 2, @ThreadId, @ThreadName, 1)";
 
 
                 IDbDataParameter timeParameter =
@@ -347,11 +377,18 @@ namespace Weaver.Editor
                 timestampParameter.Value = timeStamp;
                 cmd.Parameters.Add(timestampParameter);
 
+                IDbDataParameter threadIdParameter =
+                    cmd.CreateParameter();
+                threadIdParameter.DbType = DbType.Int32;
+                threadIdParameter.ParameterName = "@ThreadId";
+                threadIdParameter.Value = threadId;
+                cmd.Parameters.Add(threadIdParameter);
+
                 IDbDataParameter threadNameParameter =
                     cmd.CreateParameter();
                 threadNameParameter.DbType = DbType.String;
                 threadNameParameter.ParameterName = "@ThreadName";
-                threadNameParameter.Value = threadId.ToString();
+                threadNameParameter.Value = threadNamesById[threadId];
                 cmd.Parameters.Add(threadNameParameter);
 
                 cmd.ExecuteNonQuery();
