@@ -1,9 +1,6 @@
 {
     "name": "Weaver",
-    "rootNamespace": "",
-    "references": [
-        "GUID:b51dadc5ea53a604eaad6d735bda7cda"
-    ],
+    "references": [],
     "includePlatforms": [
         "Editor"
     ],
