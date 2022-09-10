@@ -109,6 +109,7 @@ namespace Weaver.Editor.Components
                 methodNameString = classNameString;
             }
             string namespaceName = methodDefinition.DeclaringType.Namespace;
+            string javaReturnType = $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runitme-to-unity
 
             ClassName parentClass = new ClassName(
                 new FileName(""),
@@ -117,7 +118,7 @@ namespace Weaver.Editor.Components
             MethodName methodName = new MethodName(
                 parentClass,
                 methodNameString,
-                methodDefinition.ReturnType.Name,
+                javaReturnType,
                 methodDefinition.Parameters.Select(x => new Argument(x.Name, TypeName.For(x.ParameterType.Name))));
             return methodName;
         }
