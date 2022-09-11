@@ -162,12 +162,21 @@ namespace Weaver.Editor.Components
         static MethodName MethodNameFromDefinition(MethodDefinition methodDefinition)
         {
             string methodNameString = methodDefinition.Name;
-            string classNameString = methodDefinition.DeclaringType.Name;
             if (methodNameString == ".ctor")
             {
-                methodNameString = classNameString;
+                methodNameString = methodDefinition.DeclaringType.Name;
             }
+            
+            string classNameString = methodDefinition.DeclaringType.FullName;
+            
             string namespaceName = methodDefinition.DeclaringType.Namespace;
+            if (!string.IsNullOrEmpty(namespaceName))
+            {
+                classNameString = classNameString[(namespaceName.Length + 1)..];
+            }
+
+            classNameString = classNameString.Replace('/', '$'); // inner class separator
+            
             string javaReturnType = $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runitme-to-unity
 
             ClassName parentClass = new ClassName(

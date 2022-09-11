@@ -94,6 +94,8 @@ namespace Weaver.Editor.Settings
                     VisitFields(typeCollection[typeIndex].Fields);
                     // visit Properties
                     VisitProperties(typeCollection[typeIndex].Properties);
+                    // Visit Nested Types
+                    VisitTypes(typeCollection[typeIndex].NestedTypes);
                     // Increase count
                     totalTypesVisited++;
                 }

@@ -7,6 +7,8 @@ namespace DefaultNamespace
             Other3();
             Other2();
             var x = GetNumber1();
+            InnerClass innerClass = new InnerClass();
+            innerClass.GetA();
         }
         
         void Other3()
@@ -30,6 +32,19 @@ namespace DefaultNamespace
         static int GetNumber1()
         {
             return 1;
+        }
+
+        class InnerClass
+        {
+            public string GetA()
+            {
+                return "A";
+            }
+            
+            string GetB()
+            {
+                return "A";
+            }
         }
     }
 }
