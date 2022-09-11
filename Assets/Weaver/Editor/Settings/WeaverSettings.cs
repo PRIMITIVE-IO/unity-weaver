@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,6 +25,10 @@ namespace Weaver.Editor.Settings
         [Tooltip("This is evaluated before Weaver runs to check if it should execute. The symbol expression must come out to be true")]
         ScriptingSymbols m_RequiredScriptingSymbols;
 
+        [SerializeField]
+        [Tooltip("The path where the output will be traced. E.g. `C:\\Users\\<username>\\Desktop\\output.db`. Default if not specified: the assemblies folder")]
+        public string m_PathToOutput;
+
         [SerializeField] List<WeavedAssembly> m_WeavedAssemblies;
 
         [SerializeField]
@@ -33,7 +37,15 @@ namespace Weaver.Editor.Settings
 
         [SerializeField]
         [UsedImplicitly]
-        bool m_IsEnabled = true; // m_Enabled is used by Unity and throws errors (even if scriptable objects don't have that field) 
+        bool m_IsEnabled = true; // m_Enabled is used by Unity and throws errors (even if scriptable objects don't have that field)
+
+        [SerializeField]
+        [UsedImplicitly]
+        public bool m_Verbose = true;
+        
+        [SerializeField] public List<string> m_TypesToSkip;
+        
+        [SerializeField] public List<string> m_MethodsToSkip;
 
         [UsedImplicitly] Log m_Log;
 
@@ -120,6 +132,16 @@ namespace Weaver.Editor.Settings
             if (m_WeavedAssemblies == null)
             {
                 m_WeavedAssemblies = new List<WeavedAssembly>();
+            }
+            
+            if (m_TypesToSkip == null)
+            {
+                m_TypesToSkip = new List<string>();
+            }
+            
+            if (m_MethodsToSkip == null)
+            {
+                m_MethodsToSkip = new List<string>();
             }
 
             m_Components.SetOwner(this);

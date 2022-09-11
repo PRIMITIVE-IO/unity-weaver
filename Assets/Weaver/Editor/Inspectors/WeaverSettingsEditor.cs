@@ -59,12 +59,18 @@ namespace Weaver.Editor.Inspectors
         SerializedProperty m_WeavedAssemblies;
         SerializedProperty m_Components;
         SerializedProperty m_Enabled;
+        SerializedProperty m_Verbose;
+        SerializedProperty m_TypesToSkip;
+        SerializedProperty m_MethodsToSkip;
         SerializedProperty m_IsSymbolsDefined;
         SerializedProperty m_RequiredScriptingSymbols;
+        SerializedProperty m_OutputPath;
         Log m_Log;
 
         // Lists
         ReorderableList m_WeavedAssembliesList;
+        ReorderableList m_TypesToSkipList;
+        ReorderableList m_MethodsToSkipList;
 
         // Layouts
         Vector2 m_LogScrollPosition;
@@ -72,6 +78,8 @@ namespace Weaver.Editor.Inspectors
 
         // Labels
         GUIContent m_WeavedAssemblyHeaderLabel;
+        GUIContent m_TypesToSkipHeaderLabel;
+        GUIContent m_MethodsToSkipHeaderLabel;
         static Styles m_Styles;
 
         bool _hasModifiedProperties;
@@ -82,20 +90,42 @@ namespace Weaver.Editor.Inspectors
             m_WeavedAssemblies = serializedObject.FindProperty("m_WeavedAssemblies");
             m_Components = serializedObject.FindProperty("m_Components");
             m_Enabled = serializedObject.FindProperty("m_IsEnabled");
+            m_Verbose = serializedObject.FindProperty("m_Verbose");
+            m_TypesToSkip = serializedObject.FindProperty("m_TypesToSkip");
+            m_MethodsToSkip = serializedObject.FindProperty("m_MethodsToSkip");
 
             // Get the log
             m_Log = serializedObject.FindField<Log>("m_Log").value;
 
             m_RequiredScriptingSymbols = serializedObject.FindProperty("m_RequiredScriptingSymbols");
+            m_OutputPath = serializedObject.FindProperty("m_PathToOutput");
             m_IsSymbolsDefined = m_RequiredScriptingSymbols.FindPropertyRelative("m_IsActive");
+            
             m_WeavedAssembliesList = new ReorderableList(serializedObject, m_WeavedAssemblies);
             m_WeavedAssembliesList.drawHeaderCallback += OnWeavedAssemblyDrawHeader;
             m_WeavedAssembliesList.drawElementCallback += OnWeavedAssemblyDrawElement;
             m_WeavedAssembliesList.onAddCallback += OnWeavedAssemblyElementAdded;
             m_WeavedAssembliesList.drawHeaderCallback += OnWeavedAssemblyHeader;
             m_WeavedAssembliesList.onRemoveCallback += OnWeavedAssemblyRemoved;
+            
+            m_TypesToSkipList = new ReorderableList(serializedObject, m_TypesToSkip);
+            m_TypesToSkipList.drawHeaderCallback += OnTypesToSkipDrawHeader;
+            m_TypesToSkipList.drawElementCallback += OnTypesToSkipDrawElement;
+            m_TypesToSkipList.onAddCallback += OnTypesToSkipElementAdded;
+            m_TypesToSkipList.onRemoveCallback += OnTypesToSkipRemoved;
+            m_TypesToSkipList.drawHeaderCallback += OnTypesToSkipHeader;
+            
+            m_MethodsToSkipList = new ReorderableList(serializedObject, m_MethodsToSkip);
+            m_MethodsToSkipList.drawHeaderCallback += OnMethodsToSkipDrawHeader;
+            m_MethodsToSkipList.drawElementCallback += OnMethodsToSkipDrawElement;
+            m_MethodsToSkipList.onAddCallback += OnMethodsToSkipElementAdded;
+            m_MethodsToSkipList.onRemoveCallback += OnMethodsToSkipRemoved;
+            m_MethodsToSkipList.drawHeaderCallback += OnMethodsToSkipHeader;
+            
             // Labels 
             m_WeavedAssemblyHeaderLabel = new GUIContent("Weaved Assemblies");
+            m_TypesToSkipHeaderLabel = new GUIContent("Types To Skip");
+            m_MethodsToSkipHeaderLabel = new GUIContent("Methods To Skip");
         }
 
         void OnDisable()
@@ -119,10 +149,70 @@ namespace Weaver.Editor.Inspectors
         {
             GUI.Label(rect, WeaverContent.settingsWeavedAsesmbliesTitle);
         }
+        
+        void OnTypesToSkipDrawHeader(Rect rect)
+        {
+            GUI.Label(rect, WeaverContent.settingsTypesToSkipTitle);
+        }
+        
+        void OnMethodsToSkipDrawHeader(Rect rect)
+        {
+            GUI.Label(rect, WeaverContent.settingsMethodsToSkipTitle);
+        }
 
         void OnWeavedAssemblyRemoved(ReorderableList list)
         {
             m_WeavedAssemblies.DeleteArrayElementAtIndex(list.index);
+        }
+        
+        void OnTypesToSkipRemoved(ReorderableList list)
+        {
+            m_TypesToSkip.DeleteArrayElementAtIndex(list.index);
+        }
+        
+        void OnMethodsToSkipRemoved(ReorderableList list)
+        {
+            m_MethodsToSkip.DeleteArrayElementAtIndex(list.index);
+        }
+        
+        void OnTypesToSkipHeader(Rect rect)
+        {
+            GUI.Label(rect, m_TypesToSkipHeaderLabel);
+        }
+        
+        void OnMethodsToSkipHeader(Rect rect)
+        {
+            GUI.Label(rect, m_MethodsToSkipHeaderLabel);
+        }
+        
+        void OnTypesToSkipDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+        {
+            SerializedProperty indexProperty = m_TypesToSkip.GetArrayElementAtIndex(index);
+            EditorGUI.PropertyField(rect, indexProperty);
+        }
+        
+        void OnMethodsToSkipDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+        {
+            SerializedProperty indexProperty = m_MethodsToSkip.GetArrayElementAtIndex(index);
+            EditorGUI.PropertyField(rect, indexProperty);
+        }
+
+        void OnTypesToSkipElementAdded(ReorderableList list)
+        {
+            // This adds the new element but copies all values of the select or last element in the list
+            list.serializedProperty.arraySize++;
+
+            SerializedProperty newElement = list.serializedProperty.GetArrayElementAtIndex(list.serializedProperty.arraySize - 1);
+            newElement.stringValue = "";
+        }
+        
+        void OnMethodsToSkipElementAdded(ReorderableList list)
+        {
+            // This adds the new element but copies all values of the select or last element in the list
+            list.serializedProperty.arraySize++;
+
+            SerializedProperty newElement = list.serializedProperty.GetArrayElementAtIndex(list.serializedProperty.arraySize - 1);
+            newElement.stringValue = "";
         }
 
         public override void OnInspectorGUI()
@@ -137,7 +227,9 @@ namespace Weaver.Editor.Inspectors
                 GUILayout.Label("Settings", EditorStyles.boldLabel);
 
                 EditorGUILayout.PropertyField(m_Enabled);
+                EditorGUILayout.PropertyField(m_Verbose);
                 EditorGUILayout.PropertyField(m_RequiredScriptingSymbols);
+                EditorGUILayout.PropertyField(m_OutputPath);
 
                 if (!m_Enabled.boolValue)
                 {
@@ -151,6 +243,8 @@ namespace Weaver.Editor.Inspectors
 
                 EditorGUILayout.PropertyField(m_Components);
                 m_WeavedAssembliesList.DoLayoutList();
+                m_TypesToSkipList.DoLayoutList();
+                m_MethodsToSkipList.DoLayoutList();
             }
             if (EditorGUI.EndChangeCheck())
             {

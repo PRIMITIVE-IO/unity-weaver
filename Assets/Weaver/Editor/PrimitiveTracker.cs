@@ -11,6 +11,7 @@ using System.Threading;
 using JetBrains.Annotations;
 using Mono.Data.Sqlite;
 using UnityEngine;
+using Weaver.Editor.Settings;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
@@ -30,13 +31,18 @@ namespace Weaver.Editor
 
         static readonly Stopwatch sw = Stopwatch.StartNew();
 
-        public const bool Verbose = false;
-        public static int EntryCount = 0;
+        static bool verbose => WeaverSettings.Instance().m_Verbose;
+        static int entryCount = 0;
 
         static string DbDefaultPath
         {
             get
             {
+                if (!string.IsNullOrEmpty(WeaverSettings.Instance().m_PathToOutput))
+                {
+                    return WeaverSettings.Instance().m_PathToOutput;
+                }
+                
                 string codeBase = Assembly.GetExecutingAssembly().CodeBase;
                 UriBuilder uri = new UriBuilder(codeBase);
                 string path = Uri.UnescapeDataString(uri.Path);
@@ -49,7 +55,7 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
-            if (Verbose)
+            if (verbose)
             {
                 Debug.Log(
                     $"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
@@ -63,7 +69,7 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
-            if (Verbose)
+            if (verbose)
             {
                 Debug.Log(
                     $"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
@@ -88,10 +94,10 @@ namespace Weaver.Editor
             primitiveTraceSqliteOutput.InsertStackFrames(stackMethods.ToList());
             primitiveTraceSqliteOutput.InsertObject(stack.ToList());
 
-            EntryCount++;
-            if (EntryCount % 500 == 0)
+            entryCount++;
+            if (entryCount % 500 == 0)
             {
-                Debug.Log(EntryCount);
+                Debug.Log(entryCount);
             }
         }
 
@@ -100,7 +106,7 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
-            if (Verbose)
+            if (verbose)
             {
                 Debug.Log(
                     $"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
@@ -114,7 +120,7 @@ namespace Weaver.Editor
         {
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
-            if (Verbose)
+            if (verbose)
             {
                 Debug.Log(
                     $"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");

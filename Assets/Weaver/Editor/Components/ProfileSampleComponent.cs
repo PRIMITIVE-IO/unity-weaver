@@ -3,6 +3,7 @@ using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using UnityEngine;
+using Weaver.Editor.Settings;
 using Weaver.Editor.Type_Extensions;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 
@@ -22,14 +23,9 @@ namespace Weaver.Editor.Components
         bool skip = true;
         bool isMonoBehaviour = false;
 
-        public static readonly HashSet<string> TypesToSkip = new()
-        {
-        };
+        static List<string> TypesToSkip => WeaverSettings.Instance().m_TypesToSkip;
 
-        public static readonly HashSet<string> MethodsToSkip = new()
-        {
-            "OnValidate"
-        };
+        static List<string> MethodsToSkip => WeaverSettings.Instance().m_MethodsToSkip;
 
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
@@ -67,9 +63,10 @@ namespace Weaver.Editor.Components
             // don't ever record MonoBehaviour constructors -> they run on recompile
             if (isMonoBehaviour && methodDefinition.Name is ".ctor") return;
 
-            if (MethodsToSkip.Contains(methodDefinition.Name)) return;
-
             MethodName methodName = MethodNameFromDefinition(methodDefinition);
+
+            string methodFqn = $"{((ClassName)methodName.ContainmentParent).FullyQualifiedName}.{methodName.ShortName}";
+            if (MethodsToSkip.Contains(methodFqn)) return;
 
             // get body and processor for code injection
             MethodBody body = methodDefinition.Body;

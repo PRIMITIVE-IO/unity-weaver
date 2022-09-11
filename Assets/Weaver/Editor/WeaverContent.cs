@@ -5,6 +5,8 @@ namespace Weaver.Editor
     public static class WeaverContent
     {
         public static readonly GUIContent settingsWeavedAsesmbliesTitle;
+        public static readonly GUIContent settingsTypesToSkipTitle;
+        public static readonly GUIContent settingsMethodsToSkipTitle;
         public static readonly GUIContent settingsComponentsTitle;
         public static readonly GUIContent settingsEnalbedToggle; 
 
@@ -29,6 +31,18 @@ namespace Weaver.Editor
                 text = "Weaved Assemblies",
                 tooltip = "The list of all the assemblies that Weaver will process and apply all it's active components too. If an assembly is not listed " +
                 "here Weaver will not touch it. Every time on of these assemblies change Weaver starts running."
+            };
+            
+            settingsTypesToSkipTitle = new GUIContent()
+            {
+                text = "Types To Skip",
+                tooltip = "Fully qualified name of types to skip. E.g. `MyNamespace.MyClass`"
+            };
+            
+            settingsMethodsToSkipTitle = new GUIContent()
+            {
+                text = "Methods To Skip",
+                tooltip = "Fully qualified name of methods to skip. E.g. `MyNamespace.MyClass.MyMethod`"
             };
 
         }
