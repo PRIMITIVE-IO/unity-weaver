@@ -22,25 +22,27 @@ namespace Weaver.Editor
         /// <summary>
         /// Allows us to generate a unique ID for each instance of every class that we see.
         /// </summary>
-        static readonly ObjectIDGenerator objectIDGenerator = new();
+        static ObjectIDGenerator objectIDGenerator;
 
-        static readonly PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput = new(DbDefaultPath);
+        static PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput;
 
-        static readonly Dictionary<int, Stack<PrimitiveStackEntry>?> callStacksByThreadId = new();
-        static readonly Dictionary<int, string> threadNamesById = new();
+        static Dictionary<int, Stack<PrimitiveStackEntry>?> callStacksByThreadId;
+        static Dictionary<int, string> threadNamesById;
 
-        static readonly Stopwatch sw = Stopwatch.StartNew();
+        static Stopwatch sw;
 
-        static bool verbose => WeaverSettings.Instance().m_Verbose;
+        static bool verbose;
         static int entryCount = 0;
+        
+        static bool first = true;
 
         static string DbDefaultPath
         {
             get
             {
-                if (!string.IsNullOrEmpty(WeaverSettings.Instance().m_PathToOutput))
+                if (!string.IsNullOrEmpty(WeaverSettings.Instance.m_PathToOutput))
                 {
-                    return WeaverSettings.Instance().m_PathToOutput;
+                    return WeaverSettings.Instance.m_PathToOutput;
                 }
                 
                 string codeBase = Assembly.GetExecutingAssembly().CodeBase;
@@ -50,9 +52,45 @@ namespace Weaver.Editor
             }
         }
 
+        static void Initialize()
+        {
+            objectIDGenerator = new();
+
+            primitiveTraceSqliteOutput = new(DbDefaultPath);
+
+            callStacksByThreadId = new();
+            threadNamesById = new();
+
+            sw = Stopwatch.StartNew();
+            
+            verbose = WeaverSettings.Instance.m_Verbose;
+        }
+
+        static bool CheckPlayingAndInitialize()
+        {
+            try
+            {
+                if (!Application.isPlaying) return false;
+            }
+            catch (UnityException e)
+            {
+                // do nothing - trying to check from another thread or from MonoBehaviour constructor
+            }
+
+            if (first)
+            {
+                Initialize();
+                first = false;
+            }
+
+            return true;
+        }
+
         [PublicAPI]
         public static void OnInstanceEntry(object traceObject, string methodDefinition)
         {
+            if (!CheckPlayingAndInitialize()) return;
+            
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
             if (verbose)
@@ -67,6 +105,8 @@ namespace Weaver.Editor
         [PublicAPI]
         public static void OnStaticEntry(string methodDefinition)
         {
+            if (!CheckPlayingAndInitialize()) return;
+            
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
             if (verbose)
@@ -104,6 +144,8 @@ namespace Weaver.Editor
         [PublicAPI]
         public static void OnInstanceExit(object traceObject, string methodDefinition)
         {
+            if (!CheckPlayingAndInitialize()) return;
+            
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
             if (verbose)
@@ -118,6 +160,8 @@ namespace Weaver.Editor
         [PublicAPI]
         public static void OnStaticExit(string methodDefinition)
         {
+            if (!CheckPlayingAndInitialize()) return;
+            
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
             if (verbose)

@@ -23,9 +23,9 @@ namespace Weaver.Editor.Components
         bool skip = true;
         bool isMonoBehaviour = false;
 
-        static List<string> TypesToSkip => WeaverSettings.Instance().m_TypesToSkip;
+        static List<string> TypesToSkip => WeaverSettings.Instance.m_TypesToSkip;
 
-        static List<string> MethodsToSkip => WeaverSettings.Instance().m_MethodsToSkip;
+        static List<string> MethodsToSkip => WeaverSettings.Instance.m_MethodsToSkip;
 
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
