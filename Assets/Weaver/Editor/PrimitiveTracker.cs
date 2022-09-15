@@ -90,13 +90,29 @@ namespace Weaver.Editor
         public static void OnInstanceEntry(object traceObject, string methodDefinition)
         {
             if (!CheckPlayingAndInitialize()) return;
-            
+
             int threadId = Environment.CurrentManagedThreadId;
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
             if (verbose)
             {
                 Debug.Log(
                     $"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+            }
+            
+            if (traceObject is Object)
+            {
+                if (UnityMessages.Contains(primitiveStackEntry.MethodName.ShortName))
+                {
+                    callStacksByThreadId.TryGetValue(threadId, out Stack<PrimitiveStackEntry>? stack);
+                    if (stack != null && stack.Any())
+                    {
+                        if (verbose)
+                        {
+                            Debug.LogWarning($"Clearing Stack for Unity Message invocation {primitiveStackEntry.MethodName.ShortName}.\n This should not happen, because the previous stack should have returned on this thread before the next Unity Message was called");
+                        }
+                        stack.Clear();
+                    }
+                }
             }
 
             PushStackAndWrite(primitiveStackEntry, threadId);
@@ -544,5 +560,75 @@ namespace Weaver.Editor
                 transaction.Commit();
             }
         }
+
+        // from: https://docs.unity3d.com/ScriptReference/MonoBehaviour.html
+        static HashSet<string> UnityMessages = new()
+        {
+            "Awake",
+            "FixedUpdate",
+            "LateUpdate",
+            "OnAnimatorIK",
+            "OnAnimatorMove",
+            "OnApplicationFocus",
+            "OnApplicationPause",
+            "OnApplicationQuit",
+            "OnAudioFilterRead",
+            "OnBecameInvisible",
+            "OnBecameVisible",
+            "OnCollisionEnter",
+            "OnCollisionEnter2D",
+            "OnCollisionExit",
+            "OnCollisionExit2D",
+            "OnCollisionStay",
+            "OnCollisionStay2D",
+            "OnConnectedToServer",
+            "OnControllerColliderHit",
+            "OnDestroy",
+            "OnDisable",
+            "OnDisconnectedFromServer",
+            "OnDrawGizmos",
+            "OnDrawGizmosSelected",
+            "OnEnable",
+            "OnFailedToConnect",
+            "OnFailedToConnectToMasterServer",
+            "OnGUI",
+            "OnJointBreak",
+            "OnJointBreak2D",
+            "OnMasterServerEvent",
+            "OnMouseDown",
+            "OnMouseDrag",
+            "OnMouseEnter",
+            "OnMouseExit",
+            "OnMouseOver",
+            "OnMouseUp",
+            "OnMouseUpAsButton",
+            "OnNetworkInstantiate",
+            "OnParticleCollision",
+            "OnParticleSystemStopped",
+            "OnParticleTrigger",
+            "OnParticleUpdateJobScheduled",
+            "OnPlayerConnected",
+            "OnPlayerDisconnected",
+            "OnPostRender",
+            "OnPreCull",
+            "OnPreRender",
+            "OnRenderImage",
+            "OnRenderObject",
+            "OnSerializeNetworkView",
+            "OnServerInitialized",
+            "OnTransformChildrenChanged",
+            "OnTransformParentChanged",
+            "OnTriggerEnter",
+            "OnTriggerEnter2D",
+            "OnTriggerExit",
+            "OnTriggerExit2D",
+            "OnTriggerStay",
+            "OnTriggerStay2D",
+            "OnValidate",
+            "OnWillRenderObject",
+            "Reset",
+            "Start",
+            "Update"
+        };
     }
 }
