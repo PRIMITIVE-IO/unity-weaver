@@ -32,15 +32,19 @@ namespace Weaver.Editor
         static Stopwatch sw;
 
         static bool verbose;
-        static int entryCount = 0;
         
         static bool first = true;
+        
+        static readonly List<Batch> accumulatedEntries = new();
+        
+        static int lastStackEntryCount = 1;
+        static int lastThreadCount = 1;
 
         static string DbDefaultPath
         {
             get
             {
-                if (!string.IsNullOrEmpty(WeaverSettings.Instance.m_PathToOutput))
+                if (WeaverSettings.Instance != null && !string.IsNullOrEmpty(WeaverSettings.Instance.m_PathToOutput))
                 {
                     return WeaverSettings.Instance.m_PathToOutput;
                 }
@@ -56,14 +60,13 @@ namespace Weaver.Editor
         {
             objectIDGenerator = new();
 
-            primitiveTraceSqliteOutput = new(DbDefaultPath);
-
             callStacksByThreadId = new();
             threadNamesById = new();
 
-            sw = Stopwatch.StartNew();
+            primitiveTraceSqliteOutput = new(DbDefaultPath);
+            verbose = WeaverSettings.Instance != null && WeaverSettings.Instance.m_Verbose;
             
-            verbose = WeaverSettings.Instance.m_Verbose;
+            sw = Stopwatch.StartNew();
         }
 
         static bool CheckPlayingAndInitialize()
@@ -92,30 +95,67 @@ namespace Weaver.Editor
             if (!CheckPlayingAndInitialize()) return;
 
             int threadId = Environment.CurrentManagedThreadId;
+            string[] split = methodDefinition.Split('|');
+            threadId = CheckMessageThreadId(traceObject, split[1], threadId);
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
+
+            //StackTrace stackTrace = new StackTrace(false);
+            //List<string> stackMethods = StackMethods(stackTrace);
+
             if (verbose)
             {
-                Debug.Log(
-                    $"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
-            }
-            
-            if (traceObject is Object)
-            {
-                if (UnityMessages.Contains(primitiveStackEntry.MethodName.ShortName))
-                {
-                    callStacksByThreadId.TryGetValue(threadId, out Stack<PrimitiveStackEntry>? stack);
-                    if (stack != null && stack.Any())
-                    {
-                        if (verbose)
-                        {
-                            Debug.LogWarning($"Clearing Stack for Unity Message invocation {primitiveStackEntry.MethodName.ShortName}.\n This should not happen, because the previous stack should have returned on this thread before the next Unity Message was called");
-                        }
-                        stack.Clear();
-                    }
-                }
+                Log(primitiveStackEntry.MethodName.FullyQualifiedName,
+                    primitiveStackEntry.ObjectId,
+                    threadId,
+                    true);
             }
 
             PushStackAndWrite(primitiveStackEntry, threadId);
+        }
+
+        static int CheckMessageThreadId(object traceObject, string methodShortName, int threadId)
+        {
+            if (traceObject is not Object traceObjectObject) return threadId;
+            
+            if (!UnityMessages.Contains(methodShortName)) return threadId;
+            
+            callStacksByThreadId.TryGetValue(threadId, out Stack<PrimitiveStackEntry>? stack);
+            
+            if (stack == null || !stack.Any()) return threadId;
+            if (verbose)
+            {
+                Debug.LogWarning($"Unity Message invocation interrupting current stack: {methodShortName}.\n This should not happen, because the previous stack should have returned on this thread before the next Unity Message was called");
+            }
+
+            return Math.Abs(traceObjectObject.GetInstanceID());
+        }
+
+        static List<string> StackMethods(StackTrace stackTrace)
+        {
+            bool first = true;
+            List<string> stackMethods = new();
+            foreach (StackFrame? stackFrame in stackTrace.GetFrames())
+            {
+                if (first)
+                {
+                    // skip the tracer method (this)
+                    first = false;
+                    continue;
+                }
+                
+                if (stackFrame != null)
+                {
+                    string traceMethodName = stackFrame.GetMethod().Name;
+                    string traceMethodDeclType = stackFrame.GetMethod().DeclaringType.FullName;
+                    if (traceMethodName == ".ctor")
+                    {
+                        traceMethodName = stackFrame.GetMethod().DeclaringType.Name;
+                    }
+                    stackMethods.Add( $"{traceMethodDeclType}.{traceMethodName}");
+                }
+            }
+
+            return stackMethods;
         }
         
         [PublicAPI]
@@ -127,8 +167,10 @@ namespace Weaver.Editor
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
             if (verbose)
             {
-                Debug.Log(
-                    $"Entering Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+                Log(primitiveStackEntry.MethodName.FullyQualifiedName,
+                    primitiveStackEntry.ObjectId,
+                    threadId,
+                    true);
             }
 
             PushStackAndWrite(primitiveStackEntry, threadId);
@@ -146,15 +188,45 @@ namespace Weaver.Editor
             stack.Push(primitiveStackEntry);
             IEnumerable<MethodName> stackMethods = stack.Select(x => x.MethodName);
 
-            primitiveTraceSqliteOutput.InsertThread(threadId, sw.ElapsedMilliseconds);
-            primitiveTraceSqliteOutput.InsertStackFrames(stackMethods.ToList());
-            primitiveTraceSqliteOutput.InsertObject(stack.ToList());
-
-            entryCount++;
-            if (entryCount % 500 == 0)
+            Batch newBatch = new(
+                threadId, 
+                sw.ElapsedMilliseconds, 
+                stackMethods.ToList(), 
+                stack.ToList(), 
+                lastStackEntryCount, 
+                lastThreadCount);
+            
+            lastStackEntryCount += stack.Count;
+            lastThreadCount++;
+            accumulatedEntries.Add(newBatch);
+            
+            if (threadId == 1 && accumulatedEntries.Count > 2000)
             {
-                Debug.Log(entryCount);
+                // only write from the main thread
+                WriteAll();
             }
+        }
+
+        static void WriteAll()
+        {
+            Debug.Log($"Writing {accumulatedEntries.Count} entries...");
+
+            IEnumerable<Tuple<int, long, int>> threadIdsAndTimes =
+                accumulatedEntries.Select(x => new Tuple<int, long, int>(x.threadId, x.elapsed, x.threadCount));
+            primitiveTraceSqliteOutput.InsertThread(threadIdsAndTimes.ToList());
+                
+            IEnumerable<Tuple<int, MethodName[]>> stacksToInsert = accumulatedEntries
+                .Select(x => new Tuple<int, MethodName[]>(x.threadCount, x.stacks));
+            primitiveTraceSqliteOutput.InsertStackFrames(stacksToInsert.ToList());
+
+            IEnumerable<Tuple<int, PrimitiveStackEntry[]>> objectsToInsert =
+                accumulatedEntries.Select(x =>
+                    new Tuple<int, PrimitiveStackEntry[]>(x.stackEntryCount, x.entries));
+            primitiveTraceSqliteOutput.InsertObject(objectsToInsert.ToList());
+            
+            Debug.Log($"Wrote {accumulatedEntries.Count} entries");
+            
+            accumulatedEntries.Clear();
         }
 
         [PublicAPI]
@@ -163,11 +235,17 @@ namespace Weaver.Editor
             if (!CheckPlayingAndInitialize()) return;
             
             int threadId = Environment.CurrentManagedThreadId;
+            string[] split = methodDefinition.Split('|');
+            threadId = CheckMessageThreadId(traceObject, split[1], threadId);
+            
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(traceObject, methodDefinition, threadId);
+
             if (verbose)
             {
-                Debug.Log(
-                    $"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+                Log(primitiveStackEntry.MethodName.FullyQualifiedName,
+                    primitiveStackEntry.ObjectId,
+                    threadId,
+                    false);
             }
 
             PopStack(primitiveStackEntry, threadId);
@@ -182,8 +260,13 @@ namespace Weaver.Editor
             PrimitiveStackEntry primitiveStackEntry = EntryFromInfos(null, methodDefinition, threadId);
             if (verbose)
             {
-                Debug.Log(
-                    $"Exiting Method {primitiveStackEntry.MethodName.FullyQualifiedName} on instance {primitiveStackEntry.ObjectId} on thread {threadId}");
+                if (verbose)
+                {
+                    Log(primitiveStackEntry.MethodName.FullyQualifiedName,
+                        primitiveStackEntry.ObjectId,
+                        threadId,
+                        false);
+                }
             }
 
             PopStack(primitiveStackEntry, threadId);
@@ -207,7 +290,7 @@ namespace Weaver.Editor
             long classInstanceId = -1;
             if (traceObject != null)
             {
-                classInstanceId = InstanceIdFrom(traceObject);
+                classInstanceId = InstanceIdFrom(traceObject, threadId);
             }
 
             if (!threadNamesById.ContainsKey(threadId))
@@ -220,12 +303,11 @@ namespace Weaver.Editor
             return primitiveStackEntry;
         }
 
-        static long InstanceIdFrom(object traceObject)
+        static long InstanceIdFrom(object traceObject, int threadId)
         {
             bool isNotUnityManaged = true;
             long classInstanceId = -1;
             
-            int threadId = Environment.CurrentManagedThreadId;
             if (!threadNamesById.ContainsKey(threadId))
             {
                 string threadName = Thread.CurrentThread.Name ?? threadId.ToString();
@@ -234,13 +316,13 @@ namespace Weaver.Editor
 
             if (traceObject is Object traceObjectObject)
             {
-                isNotUnityManaged = false;
-                classInstanceId = traceObjectObject.GetInstanceID();
+                //isNotUnityManaged = false;
+                //classInstanceId = traceObjectObject.GetInstanceID();
             }
 
             if (traceObject is Component traceObjectComponent)
             {
-                isNotUnityManaged = false;
+                //isNotUnityManaged = false;
                 // gameobject
                 //classInstanceId = traceObjectComponent.gameObject.GetInstanceID();
             }
@@ -251,6 +333,12 @@ namespace Weaver.Editor
             }
 
             return classInstanceId;
+        }
+
+        static void Log(string methodName, long objectId, int threadId, bool isEntering)
+        {
+            string entering = isEntering ? "Entering" : "Exiting";
+            Debug.Log($"{entering} Method {methodName} on instance {objectId} on thread {threadId}");
         }
 
         static MethodName FromFQN(string methodFqn)
@@ -294,14 +382,32 @@ namespace Weaver.Editor
             }
         }
 
+        struct Batch
+        {
+            public readonly int threadCount;
+            public readonly int stackEntryCount;
+            public readonly int threadId;
+            public readonly long elapsed;
+            public readonly MethodName[] stacks;
+            public readonly PrimitiveStackEntry[] entries;
+
+            public Batch(int threadId, long elapsed, List<MethodName> stacks, List<PrimitiveStackEntry> entries, int stackEntryCount, int threadCount)
+            {
+                this.threadId = threadId;
+                this.elapsed = elapsed;
+                this.stacks = stacks.ToArray();
+                this.entries = entries.ToArray();
+                this.stackEntryCount = stackEntryCount;
+                this.threadCount = threadCount;
+            }
+        }
+        
         /// <summary>
         /// Writes the result to an external database.
         /// </summary>
         class PrimitiveTraceSqliteOutput
         {
             readonly SqliteConnection conn;
-            int currentThreadEntry = 1;
-            int currentStackEntry = 1;
 
             public PrimitiveTraceSqliteOutput(string dbPath)
             {
@@ -394,7 +500,7 @@ namespace Weaver.Editor
                 cmd.ExecuteNonQuery();
             }
 
-            public void InsertThread(int threadId, long timeStamp)
+            public void InsertThread(IEnumerable<Tuple<int, long, int>> threadIdsAndTimes)
             {
                 using IDbCommand cmd = conn.CreateCommand();
                 using IDbTransaction transaction = conn.BeginTransaction();
@@ -408,40 +514,43 @@ namespace Weaver.Editor
                       is_current
                     ) VALUES (@Time, @Timestamp, 2, @ThreadId, @ThreadName, 1)";
 
+                foreach (Tuple<int, long, int> threadIdAndTime in threadIdsAndTimes)
+                {
+                    IDbDataParameter timeParameter =
+                        cmd.CreateParameter();
+                    timeParameter.DbType = DbType.Int32;
+                    timeParameter.ParameterName = "@Time";
+                    timeParameter.Value = threadIdAndTime.Item3;
+                    cmd.Parameters.Add(timeParameter);
 
-                IDbDataParameter timeParameter =
-                    cmd.CreateParameter();
-                timeParameter.DbType = DbType.Int32;
-                timeParameter.ParameterName = "@Time";
-                timeParameter.Value = currentThreadEntry;
-                cmd.Parameters.Add(timeParameter);
+                    IDbDataParameter timestampParameter =
+                        cmd.CreateParameter();
+                    timestampParameter.DbType = DbType.Int64;
+                    timestampParameter.ParameterName = "@Timestamp";
+                    timestampParameter.Value = threadIdAndTime.Item2;
+                    cmd.Parameters.Add(timestampParameter);
 
-                IDbDataParameter timestampParameter =
-                    cmd.CreateParameter();
-                timestampParameter.DbType = DbType.Int64;
-                timestampParameter.ParameterName = "@Timestamp";
-                timestampParameter.Value = timeStamp;
-                cmd.Parameters.Add(timestampParameter);
+                    IDbDataParameter threadIdParameter =
+                        cmd.CreateParameter();
+                    threadIdParameter.DbType = DbType.Int32;
+                    threadIdParameter.ParameterName = "@ThreadId";
+                    threadIdParameter.Value = threadIdAndTime.Item1;
+                    cmd.Parameters.Add(threadIdParameter);
 
-                IDbDataParameter threadIdParameter =
-                    cmd.CreateParameter();
-                threadIdParameter.DbType = DbType.Int32;
-                threadIdParameter.ParameterName = "@ThreadId";
-                threadIdParameter.Value = threadId;
-                cmd.Parameters.Add(threadIdParameter);
+                    IDbDataParameter threadNameParameter =
+                        cmd.CreateParameter();
+                    threadNameParameter.DbType = DbType.String;
+                    threadNameParameter.ParameterName = "@ThreadName";
+                    threadNameParameter.Value = threadNamesById[threadIdAndTime.Item1];
+                    cmd.Parameters.Add(threadNameParameter);
 
-                IDbDataParameter threadNameParameter =
-                    cmd.CreateParameter();
-                threadNameParameter.DbType = DbType.String;
-                threadNameParameter.ParameterName = "@ThreadName";
-                threadNameParameter.Value = threadNamesById[threadId];
-                cmd.Parameters.Add(threadNameParameter);
+                    cmd.ExecuteNonQuery();
+                }
 
-                cmd.ExecuteNonQuery();
                 transaction.Commit();
             }
 
-            public void InsertStackFrames(List<MethodName> stack)
+            public void InsertStackFrames(IEnumerable<Tuple<int, MethodName[]>> stacks)
             {
                 using IDbCommand cmd = conn.CreateCommand();
                 using IDbTransaction transaction = conn.BeginTransaction();
@@ -459,54 +568,55 @@ namespace Weaver.Editor
                       loc_line_number
                     ) VALUES (@ThreadId, @StackIndex, @LocClassName, @LocMethodName, @LocMethodType, -1, -1)";
 
-                int stackFrameCount = 0;
-                foreach (MethodName stackElement in stack)
+                foreach (Tuple<int, MethodName[]> tuple in stacks)
                 {
-                    IDbDataParameter threadIdParameter =
-                        cmd.CreateParameter();
-                    threadIdParameter.DbType = DbType.Int32;
-                    threadIdParameter.ParameterName = "@ThreadId";
-                    threadIdParameter.Value = currentThreadEntry;
-                    cmd.Parameters.Add(threadIdParameter);
+                    int stackFrameCount = 0;
+                    foreach (MethodName stackElement in tuple.Item2)
+                    {
+                        IDbDataParameter threadIdParameter =
+                            cmd.CreateParameter();
+                        threadIdParameter.DbType = DbType.Int32;
+                        threadIdParameter.ParameterName = "@ThreadId";
+                        threadIdParameter.Value = tuple.Item1;
+                        cmd.Parameters.Add(threadIdParameter);
 
-                    IDbDataParameter stackIndexParameter =
-                        cmd.CreateParameter();
-                    stackIndexParameter.DbType = DbType.Int32;
-                    stackIndexParameter.ParameterName = "@StackIndex";
-                    stackIndexParameter.Value = stackFrameCount;
-                    cmd.Parameters.Add(stackIndexParameter);
-                    stackFrameCount++;
+                        IDbDataParameter stackIndexParameter =
+                            cmd.CreateParameter();
+                        stackIndexParameter.DbType = DbType.Int32;
+                        stackIndexParameter.ParameterName = "@StackIndex";
+                        stackIndexParameter.Value = stackFrameCount;
+                        cmd.Parameters.Add(stackIndexParameter);
+                        stackFrameCount++;
 
-                    IDbDataParameter classNameParameter =
-                        cmd.CreateParameter();
-                    classNameParameter.DbType = DbType.String;
-                    classNameParameter.ParameterName = "@LocClassName";
-                    classNameParameter.Value = ((ClassName)stackElement.ContainmentParent).FullyQualifiedName;
-                    cmd.Parameters.Add(classNameParameter);
+                        IDbDataParameter classNameParameter =
+                            cmd.CreateParameter();
+                        classNameParameter.DbType = DbType.String;
+                        classNameParameter.ParameterName = "@LocClassName";
+                        classNameParameter.Value = ((ClassName)stackElement.ContainmentParent).FullyQualifiedName;
+                        cmd.Parameters.Add(classNameParameter);
 
-                    IDbDataParameter methodNameParameter =
-                        cmd.CreateParameter();
-                    methodNameParameter.DbType = DbType.String;
-                    methodNameParameter.ParameterName = "@LocMethodName";
-                    methodNameParameter.Value = stackElement.ShortName;
-                    cmd.Parameters.Add(methodNameParameter);
+                        IDbDataParameter methodNameParameter =
+                            cmd.CreateParameter();
+                        methodNameParameter.DbType = DbType.String;
+                        methodNameParameter.ParameterName = "@LocMethodName";
+                        methodNameParameter.Value = stackElement.ShortName;
+                        cmd.Parameters.Add(methodNameParameter);
 
-                    IDbDataParameter methodTypeParameter =
-                        cmd.CreateParameter();
-                    methodTypeParameter.DbType = DbType.String;
-                    methodTypeParameter.ParameterName = "@LocMethodType";
-                    methodTypeParameter.Value = stackElement.ReturnType;
-                    cmd.Parameters.Add(methodTypeParameter);
+                        IDbDataParameter methodTypeParameter =
+                            cmd.CreateParameter();
+                        methodTypeParameter.DbType = DbType.String;
+                        methodTypeParameter.ParameterName = "@LocMethodType";
+                        methodTypeParameter.Value = stackElement.ReturnType;
+                        cmd.Parameters.Add(methodTypeParameter);
 
-                    cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery();
+                    }
                 }
-
-                currentThreadEntry++;
 
                 transaction.Commit();
             }
 
-            public void InsertObject(List<PrimitiveStackEntry> stack)
+            public void InsertObject(IEnumerable<Tuple<int, PrimitiveStackEntry[]>> stacks)
             {
                 using IDbCommand cmd = conn.CreateCommand();
                 using IDbTransaction transaction = conn.BeginTransaction();
@@ -520,42 +630,43 @@ namespace Weaver.Editor
                       reference_type
                     ) VALUES (@StackFrameId, @ObjectId, @ReferenceType)";
 
-                int count = 0;
-                foreach (PrimitiveStackEntry stackEntry in stack)
+                foreach (Tuple<int, PrimitiveStackEntry[]> stack in stacks)
                 {
-                    if (stackEntry.ObjectId == -1)
+                    int count = 0;
+                    foreach (PrimitiveStackEntry stackEntry in stack.Item2)
                     {
+                        if (stackEntry.ObjectId == -1)
+                        {
+                            count++;
+                            continue;
+                        }
+
+                        IDbDataParameter stackFrameIdParameter =
+                            cmd.CreateParameter();
+                        stackFrameIdParameter.DbType = DbType.Int32;
+                        stackFrameIdParameter.ParameterName = "@StackFrameId";
+                        stackFrameIdParameter.Value = stack.Item1 + count;
+                        cmd.Parameters.Add(stackFrameIdParameter);
                         count++;
-                        continue;
+
+                        IDbDataParameter objectIdParameter =
+                            cmd.CreateParameter();
+                        objectIdParameter.DbType = DbType.Int64;
+                        objectIdParameter.ParameterName = "@ObjectId";
+                        objectIdParameter.Value = stackEntry.ObjectId;
+                        cmd.Parameters.Add(objectIdParameter);
+
+                        IDbDataParameter referenceTypeParameter =
+                            cmd.CreateParameter();
+                        referenceTypeParameter.DbType = DbType.String;
+                        referenceTypeParameter.ParameterName = "@ReferenceType";
+                        referenceTypeParameter.Value =
+                            $"L{((ClassName)stackEntry.MethodName.ContainmentParent).FullyQualifiedName};";
+                        cmd.Parameters.Add(referenceTypeParameter);
+
+                        cmd.ExecuteNonQuery();
                     }
-
-                    IDbDataParameter stackFrameIdParameter =
-                        cmd.CreateParameter();
-                    stackFrameIdParameter.DbType = DbType.Int32;
-                    stackFrameIdParameter.ParameterName = "@StackFrameId";
-                    stackFrameIdParameter.Value = currentStackEntry + count;
-                    cmd.Parameters.Add(stackFrameIdParameter);
-                    count++;
-
-                    IDbDataParameter objectIdParameter =
-                        cmd.CreateParameter();
-                    objectIdParameter.DbType = DbType.Int64;
-                    objectIdParameter.ParameterName = "@ObjectId";
-                    objectIdParameter.Value = stackEntry.ObjectId;
-                    cmd.Parameters.Add(objectIdParameter);
-
-                    IDbDataParameter referenceTypeParameter =
-                        cmd.CreateParameter();
-                    referenceTypeParameter.DbType = DbType.String;
-                    referenceTypeParameter.ParameterName = "@ReferenceType";
-                    referenceTypeParameter.Value =
-                        $"L{((ClassName)stackEntry.MethodName.ContainmentParent).FullyQualifiedName};";
-                    cmd.Parameters.Add(referenceTypeParameter);
-
-                    cmd.ExecuteNonQuery();
                 }
-
-                currentStackEntry += stack.Count;
 
                 transaction.Commit();
             }
