@@ -296,12 +296,10 @@ namespace Weaver.Editor
             ClassName? parentClassName = ContainmentParent as ClassName;
             if (parentClassName != null)
             {
-                return $"{parentClassName.FullyQualified()}${originalClassName}";
+                return $"{parentClassName.FullyQualified()}${ShortName}";
             }
 
-            string? pkg = ContainmentPackage.PackageNameString == string.Empty
-                ? null
-                : ContainmentPackage.PackageNameString;
+            string? pkg = ContainmentPackage.PackageNameString == string.Empty ? null : ContainmentPackage.PackageNameString;
 
             return IEnumerableUtils.EnumerableOfNotNull(pkg, originalClassName)
                 .JoinToString(".");
