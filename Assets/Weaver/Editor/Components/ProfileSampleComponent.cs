@@ -23,9 +23,13 @@ namespace Weaver.Editor.Components
         bool skip = true;
         bool isMonoBehaviour = false;
 
-        static List<string> TypesToSkip => WeaverSettings.Instance.m_TypesToSkip;
+        static List<string> TypesToSkip => WeaverSettings.Instance != null
+            ? WeaverSettings.Instance.m_TypesToSkip 
+            : new List<string>();
 
-        static List<string> MethodsToSkip => WeaverSettings.Instance.m_MethodsToSkip;
+        static List<string> MethodsToSkip => WeaverSettings.Instance != null 
+            ? WeaverSettings.Instance.m_MethodsToSkip 
+            : new List<string>();
 
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
@@ -34,16 +38,16 @@ namespace Weaver.Editor.Components
             TypeDefinition primitiveTracerDef = primitiveTracerRef.Resolve();
             
             onInstanceEntryMethodRef = moduleDefinition.ImportReference(
-                primitiveTracerDef.GetMethod("OnInstanceEntry", 2));
+                primitiveTracerDef.GetMethod("OnInstanceEntry", 1));
             
             onInstanceExitMethodRef = moduleDefinition.ImportReference(
-                primitiveTracerDef.GetMethod("OnInstanceExit", 2));
+                primitiveTracerDef.GetMethod("OnInstanceExit", 1));
             
             onStaticEntryMethodRef = moduleDefinition.ImportReference(
-                primitiveTracerDef.GetMethod("OnStaticEntry", 1));
+                primitiveTracerDef.GetMethod("OnStaticEntry"));
             
             onStaticExitMethodRef = moduleDefinition.ImportReference(
-                primitiveTracerDef.GetMethod("OnStaticExit", 1));
+                primitiveTracerDef.GetMethod("OnStaticExit"));
         }
 
         public override void VisitType(TypeDefinition typeDefinition)
@@ -86,7 +90,6 @@ namespace Weaver.Editor.Components
                     preEntryInstructions = new()
                     {
                         Instruction.Create(OpCodes.Nop),
-                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
                         Instruction.Create(OpCodes.Call, onStaticEntryMethodRef),
                         Instruction.Create(OpCodes.Nop)
                     };
@@ -96,10 +99,8 @@ namespace Weaver.Editor.Components
                     preEntryInstructions = new()
                     {
                         Instruction.Create(OpCodes.Nop),
-                        // Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
+                        // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
                         Instruction.Create(OpCodes.Ldarg_0),
-                        // load FQN as second argumment
-                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
                         Instruction.Create(OpCodes.Call, onInstanceEntryMethodRef),
                         Instruction.Create(OpCodes.Nop)
                     };
@@ -127,7 +128,6 @@ namespace Weaver.Editor.Components
                     exitInstructions = new()
                     {
                         Instruction.Create(OpCodes.Nop),
-                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
                         Instruction.Create(OpCodes.Call, onStaticExitMethodRef),
                         Instruction.Create(OpCodes.Nop)
                     };
@@ -137,10 +137,8 @@ namespace Weaver.Editor.Components
                     exitInstructions = new()
                     {
                         Instruction.Create(OpCodes.Nop),
-                        // Loads 'this' (0-th arg of current method) to stack in order to call 'this.GetInstanceIDs()' method
-                        Instruction.Create(OpCodes.Ldarg_0), 
-                        // Load FQN as second argument
-                        Instruction.Create(OpCodes.Ldstr, methodName.FullyQualifiedName),
+                        // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
+                        Instruction.Create(OpCodes.Ldarg_0),
                         Instruction.Create(OpCodes.Call, onInstanceExitMethodRef),
                         Instruction.Create(OpCodes.Nop)
                     };
@@ -173,6 +171,12 @@ namespace Weaver.Editor.Components
             if (!string.IsNullOrEmpty(namespaceName))
             {
                 classNameString = classNameString[(namespaceName.Length + 1)..];
+            }
+            else if (classNameString.Contains('.'))
+            {
+                // inner classes don't have namespaces defined, even if they are in a namespace
+                namespaceName = classNameString[..classNameString.LastIndexOf('.')];
+                classNameString = classNameString[(classNameString.LastIndexOf('.') + 1)..];
             }
 
             classNameString = classNameString.Replace('/', '$'); // inner class separator
