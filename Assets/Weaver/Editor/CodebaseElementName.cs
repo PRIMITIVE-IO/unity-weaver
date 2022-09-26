@@ -65,7 +65,6 @@ namespace Weaver.Editor
             CodebaseElementName b) => !(a == b);
     }
 
-
     #region MEMBERS
 
     public sealed class MethodName : CodebaseElementName
@@ -107,7 +106,7 @@ namespace Weaver.Editor
         {
             ClassName? parentClass = containmentParent as ClassName;
             string parentFqn = parentClass?.FullyQualifiedName ?? containmentParent.ShortName;
-            return $"{parentFqn}|{ShortName}|{ReturnType}|{CommaSeparatedArguments(false)}";
+            return $"{parentFqn}.{ShortName}({CommaSeparatedArguments(false)})";
         }
 
         string GetArgumentType(Argument argument)
