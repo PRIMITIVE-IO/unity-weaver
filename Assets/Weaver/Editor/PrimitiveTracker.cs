@@ -22,7 +22,7 @@ namespace Weaver.Editor
         /// </summary>
         static ObjectIDGenerator objectIDGenerator;
 
-        static PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput;
+        public static PrimitiveTraceSqliteOutput primitiveTraceSqliteOutput;
 
         /// <summary>
         /// All threads are tracked here. Since multiple threads write to this dictionary, it must be concurrent.
@@ -48,6 +48,7 @@ namespace Weaver.Editor
         static Dictionary<int, string> threadNamesById;
 
         static Stopwatch sw;
+        static ActiveRepetitions activeRepetitions;
 
         static bool verbose;
 
@@ -93,6 +94,7 @@ namespace Weaver.Editor
             accumulatedEntries = new ConcurrentQueue<Batch>();
 
             sw = Stopwatch.StartNew();
+            activeRepetitions = new ActiveRepetitions(10000, 50, 200);
         }
 
         static bool CheckPlayingAndInitialize()
@@ -167,6 +169,10 @@ namespace Weaver.Editor
             string topOfStackString = stackMethods.First();
             if (topOfStackString.StartsWith('<')) return; // anonymous method
             MethodName topOfStack = FromFQN(topOfStackString);
+
+            activeRepetitions.OnMethodEnter(topOfStack, threadIncrementor);
+            if (activeRepetitions.CurrentlyExecutingMethod()?.method == topOfStack) return;
+
             string bottomOfStack = stackMethods.Last();
 
             if (threadId == 1 && string.IsNullOrEmpty(baseOfMainThread))
@@ -318,7 +324,8 @@ namespace Weaver.Editor
                     threadId,
                     false);
             }
-
+            
+            activeRepetitions.OnMethodExit(topOfStack, threadIncrementor);
             callStacksByThreadId.TryGetValue(threadId, out ConcurrentStack<PrimitiveStackEntry>? stack);
             if (stack != null)
             {

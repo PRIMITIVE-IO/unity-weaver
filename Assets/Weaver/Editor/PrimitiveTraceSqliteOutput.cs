@@ -40,6 +40,7 @@ namespace Weaver.Editor
     public class PrimitiveTraceSqliteOutput
     {
         readonly SqliteConnection conn;
+        readonly Dictionary<MethodName, int> repetitiveRegionBeginningsByMethod = new();
 
         public PrimitiveTraceSqliteOutput(string dbPath)
         {
@@ -314,6 +315,70 @@ namespace Weaver.Editor
                     cmd.ExecuteNonQuery();
                 }
             }
+
+            transaction.Commit();
+        }
+
+        public void StartRepetitiveRegion(MethodName method, int frame)
+        {
+            if (!repetitiveRegionBeginningsByMethod.ContainsKey(method))
+            {
+                repetitiveRegionBeginningsByMethod.Add(method, frame);
+            }
+        }
+
+        public void EndRepetitiveRegion(MethodName method, int numCallsDuringRepetitiveRegion, int frame)
+        {
+            int beginning = repetitiveRegionBeginningsByMethod[method];
+            InsertRepetitiveRegion(method, beginning, numCallsDuringRepetitiveRegion, frame);
+        }
+
+        void InsertRepetitiveRegion(MethodName methodName, int beginning, int end, int frame)
+        {
+            using IDbCommand cmd = conn.CreateCommand();
+            using IDbTransaction transaction = conn.BeginTransaction();
+
+            cmd.CommandText = @"
+            INSERT INTO repetitive_region (
+                    step_from,
+                    step_to,
+                    method,
+                    call_count
+                ) VALUES (@StepFrom, @StepTo, @Method, @CallCount)";
+
+            IDbDataParameter stepFromParameter =
+                cmd.CreateParameter();
+            stepFromParameter.DbType = DbType.Int32;
+            stepFromParameter.ParameterName = "@StepFrom";
+            stepFromParameter.Value = beginning;
+            cmd.Parameters.Add(stepFromParameter);
+
+            IDbDataParameter stepToParameter =
+                cmd.CreateParameter();
+            stepToParameter.DbType = DbType.Int64;
+            stepToParameter.ParameterName = "@StepTo";
+            stepToParameter.Value = frame;
+            cmd.Parameters.Add(stepToParameter);
+
+            string javaType = $"L{((ClassName)methodName.ContainmentParent).FullyQualifiedName};";
+            string javaFqn = $"{javaType}{methodName.ShortName}:()V";
+
+            IDbDataParameter referenceTypeParameter =
+                cmd.CreateParameter();
+            referenceTypeParameter.DbType = DbType.String;
+            referenceTypeParameter.ParameterName = "@Method";
+            referenceTypeParameter.Value = javaFqn;
+
+            cmd.Parameters.Add(referenceTypeParameter);
+
+            IDbDataParameter callCountParameter =
+                cmd.CreateParameter();
+            callCountParameter.DbType = DbType.Int64;
+            callCountParameter.ParameterName = "@CallCount";
+            callCountParameter.Value = end;
+            cmd.Parameters.Add(callCountParameter);
+
+            cmd.ExecuteNonQuery();
 
             transaction.Commit();
         }
