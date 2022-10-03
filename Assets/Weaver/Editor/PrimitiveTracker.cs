@@ -171,7 +171,7 @@ namespace Weaver.Editor
             MethodName topOfStack = FromFQN(topOfStackString);
 
             activeRepetitions.OnMethodEnter(topOfStack, threadIncrementor);
-            if (activeRepetitions.CurrentlyExecutingMethod()?.method == topOfStack) return;
+            if (activeRepetitions.IsExecutingRepetitiveMethod) return;
 
             string bottomOfStack = stackMethods.Last();
 

@@ -52,14 +52,12 @@ namespace Weaver.Editor
         /// Are we currently in the middle of calling a method that is marked as
         /// repetitive?
         /// </summary>
-        bool isExecutingRepetitiveMethod => CurrentlyExecutingMethod() != null;
-
-        public ActiveRepetition? CurrentlyExecutingMethod() => activelyRepetitiveMethodsByName
-            .FirstOrDefault(x => x.Value.isExecuting).Value;
+        public bool IsExecutingRepetitiveMethod => activelyRepetitiveMethodsByName
+            .Any(x => x.Value.isExecuting);
 
         public void OnMethodEnter(MethodName method, int frame)
         {
-            if (isExecutingRepetitiveMethod)
+            if (IsExecutingRepetitiveMethod)
             {
                 // In the future, we will also track downstream calls of the
                 // currently executing repetitive method. For now, all downstream
@@ -146,7 +144,7 @@ namespace Weaver.Editor
             activelyRepetitiveMethodsByName.Clear();
         }
 
-        public class ActiveRepetition
+        class ActiveRepetition
         {
             public readonly MethodName method;
 
