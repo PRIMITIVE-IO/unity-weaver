@@ -53,7 +53,7 @@ namespace Weaver.Editor.Components
         public override void VisitType(TypeDefinition typeDefinition)
         {
             // don't trace self
-            skip = typeDefinition.Namespace.StartsWith("Weaver") || TypesToSkip.Contains(typeDefinition.FullName);
+            skip = typeDefinition.Namespace.StartsWith("Weaver")  || typeDefinition.Namespace.StartsWith("Unity") || TypesToSkip.Contains(typeDefinition.FullName);
 
             isMonoBehaviour = CheckMonoBehaviour(typeDefinition);
         }

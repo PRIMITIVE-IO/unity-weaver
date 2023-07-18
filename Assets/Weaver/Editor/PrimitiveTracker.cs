@@ -306,7 +306,7 @@ namespace Weaver.Editor
             primitiveTraceSqliteOutput.InsertStackFrames(copy);
             primitiveTraceSqliteOutput.InsertObject(copy);
 
-            Debug.Log($"Wrote {copy.Count} entries");
+            Debug.Log($"Wrote {copy.Count} entries to {DbDefaultPath}");
         }
 
         static void StackPop(StackTrace stackTrace, long instanceId = -1)
