@@ -82,14 +82,15 @@ namespace Weaver.Editor
 
         static void Initialize()
         {
-            objectIDGenerator = new();
+            Application.quitting += DequeueAndWrite;
+            objectIDGenerator = new ObjectIDGenerator();
 
-            callStacksByThreadId = new();
-            imposterThreads = new();
+            callStacksByThreadId = new ConcurrentDictionary<int, ConcurrentStack<PrimitiveStackEntry>>();
+            imposterThreads = new List<int>();
             baseOfMainThread = "";
-            threadNamesById = new();
+            threadNamesById = new Dictionary<int, string>();
 
-            primitiveTraceSqliteOutput = new(DbDefaultPath);
+            primitiveTraceSqliteOutput = new PrimitiveTraceSqliteOutput(DbDefaultPath);
             verbose = WeaverSettings.Instance != null && WeaverSettings.Instance.m_Verbose;
             accumulatedEntries = new ConcurrentQueue<Batch>();
 
@@ -275,8 +276,16 @@ namespace Weaver.Editor
             if ((threadId == 1 || imposterThreads.Contains(threadId)) && accumulatedEntries.Count > BatchSize)
             {
                 // only write from the main thread
+                DequeueAndWrite();
+            }
+        }
+        
+        static void DequeueAndWrite()
+        {
+            if (accumulatedEntries.Any())
+            {
                 List<Batch> copy = new();
-                for (int i = 0; i < BatchSize; i++)
+                while (accumulatedEntries.Any())
                 {
                     bool success = accumulatedEntries.TryDequeue(out Batch toAdd);
                     if (success)
