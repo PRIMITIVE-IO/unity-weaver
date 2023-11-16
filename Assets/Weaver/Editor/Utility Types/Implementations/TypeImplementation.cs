@@ -1,14 +1,14 @@
-﻿using Mono.Cecil;
-using System;
-using Weaver.Extensions;
+﻿using System;
+using Mono.Cecil;
+using Weaver.Editor.Type_Extensions;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Implementations
 {
     public struct TypeImplementation
     {
         public TypeReference reference;
         public TypeDefinition definition;
-        private readonly ModuleDefinition m_Module;
+        readonly ModuleDefinition m_Module;
 
         public TypeImplementation(ModuleDefinition module, Type type)
         {

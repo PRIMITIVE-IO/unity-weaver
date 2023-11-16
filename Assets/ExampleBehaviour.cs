@@ -1,54 +1,31 @@
-﻿using UnityEngine;
-using Weaver;
+using DefaultNamespace;
+using UnityEngine;
 
 public class ExampleBehaviour : MonoBehaviour
 {
-    private float m_Height = 0f;
-
-    [OnChanged("OnHeightChanged")]
-    public float height
+    void Other()
     {
-        get { return m_Height; }
-        set { m_Height = value; }
-    }
-
-    [OnChanged("OnAgeChanged", isValidated = true)]
-    public int age { get; set; }
-
-    public int otherAge
-    {
-        get { return age; }
-        set
+        var x = 1;
+        long count = 0;
+        for (int ii = 0; ii < 100000000; ii++)
         {
-            if (age != value)
-            {
-                OnAgeChanged(value);
-            }
+            count++;
         }
     }
-
-    public void Other()
+    
+    void Other2()
     {
-
+        long count = 0;
+        for (int ii = 0; ii < 100000000; ii++)
+        {
+            count++;
+        }
     }
-    public void Start()
+    
+    void Start()
     {
-        age = 23;
-        height = 6.1f;
-    }
-
-    private void OnHeightChanged(float newHeight)
-    {
-        Debug.Log("Height changed from " + m_Height + " to " + newHeight);
-    }
-
-    private void OnAgeChanged(int newAge)
-    {
-        Debug.Log("Age changed from " + age + " to " + newAge);
-    }
-
-    private void OnValidate()
-    {
-
+        Other();
+        Other2();
+        ExampleClass exampleClass = new ExampleClass();
     }
 }

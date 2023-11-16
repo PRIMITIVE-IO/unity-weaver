@@ -1,105 +1,225 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Mono.Cecil;
-using UnityEngine;
 using Mono.Cecil.Cil;
-using Weaver.Extensions;
-#if UNITY_2017_1_OR_NEWER
-using UnityEngine.Profiling; 
-#endif
+using UnityEngine;
+using Weaver.Editor.Settings;
+using Weaver.Editor.Type_Extensions;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
 
-namespace Weaver
+namespace Weaver.Editor.Components
 {
     public class ProfileSampleComponent : WeaverComponent
     {
-        private TypeReference m_ProfilerTypeReference;
-        private MethodReference m_BeginSampleWithGameObjectMethodRef;
-        private MethodReference m_BeginSampleMethodRef;
-        private MethodReference m_EndSampleMethodRef;
-        private MethodReference m_GetGameObjectMethodRef;
+        MethodReference onInstanceEntryMethodRef;
+        MethodReference onInstanceExitMethodRef;
+        MethodReference onStaticEntryMethodRef;
+        MethodReference onStaticExitMethodRef;
 
-        public override string ComponentName
-        {
-            get
-            {
-                return "Profile Sample";
-            }
-        }
+        public override string ComponentName => "Profile Sample";
 
-        public override DefinitionType EffectedDefintions
-        {
-            get
-            {
-                return DefinitionType.Module | DefinitionType.Method;
-            }
-        }
+        public override DefinitionType AffectedDefinitions => DefinitionType.Module | DefinitionType.Method;
+
+        bool skip = true;
+        bool isMonoBehaviour = false;
+
+        static List<string> TypesToSkip => WeaverSettings.Instance != null
+            ? WeaverSettings.Instance.m_TypesToSkip 
+            : new List<string>();
+
+        static List<string> MethodsToSkip => WeaverSettings.Instance != null 
+            ? WeaverSettings.Instance.m_MethodsToSkip 
+            : new List<string>();
 
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
-            // Get profiler type
-            Type profilerType = typeof(Profiler);
-            // Import the profiler type
-            m_ProfilerTypeReference = moduleDefinition.ImportReference(profilerType);
-            // Get the type def by resolving
-            TypeDefinition profilerTypeDef = m_ProfilerTypeReference.Resolve();
-            // Get our start sample
-            m_BeginSampleWithGameObjectMethodRef = profilerTypeDef.GetMethod("BeginSample", 2);
-            m_BeginSampleMethodRef = profilerTypeDef.GetMethod("BeginSample", 1);
-            // Get our end sample
-            m_EndSampleMethodRef = profilerTypeDef.GetMethod("EndSample");
-            // Get the type GameObject
-            Type componentType = typeof(Component);
-            // Get Game Object Type R
-            TypeReference componentTypeRef = moduleDefinition.ImportReference(componentType);
-            // Get the type def
-            TypeDefinition componentTypeDef = componentTypeRef.Resolve();
-            // Get our get property
-            PropertyDefinition gameObjectPropertyDef = componentTypeDef.GetProperty("gameObject");
-            m_GetGameObjectMethodRef = gameObjectPropertyDef.GetMethod;
+            // get reference to Debug.Log so that it can be called in the opcode with a string argument
+            TypeReference primitiveTracerRef = moduleDefinition.ImportReference(typeof(PrimitiveTracker));
+            TypeDefinition primitiveTracerDef = primitiveTracerRef.Resolve();
+            
+            onInstanceEntryMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnInstanceEntry", 1));
+            
+            onInstanceExitMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnInstanceExit", 1));
+            
+            onStaticEntryMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnStaticEntry"));
+            
+            onStaticExitMethodRef = moduleDefinition.ImportReference(
+                primitiveTracerDef.GetMethod("OnStaticExit"));
+        }
 
-            // Import everything 
-            moduleDefinition.ImportReference(typeof(GameObject));
-            moduleDefinition.ImportReference(m_BeginSampleMethodRef);
-            moduleDefinition.ImportReference(m_GetGameObjectMethodRef);
-            moduleDefinition.ImportReference(m_BeginSampleWithGameObjectMethodRef);
+        public override void VisitType(TypeDefinition typeDefinition)
+        {
+            // don't trace self
+            skip = typeDefinition.Namespace.StartsWith("Weaver") || TypesToSkip.Contains(typeDefinition.FullName);
+
+            isMonoBehaviour = CheckMonoBehaviour(typeDefinition);
         }
 
         public override void VisitMethod(MethodDefinition methodDefinition)
         {
-            CustomAttribute profileSample = methodDefinition.GetCustomAttribute<ProfileSampleAttribute>();
+            if (skip) return;
 
-            // Check if we have our attribute
-            if (profileSample == null)
+            if (methodDefinition.Name == ".cctor") return; // don't ever record static constructors
+
+            // don't ever record MonoBehaviour constructors -> they run on recompile
+            if (isMonoBehaviour && methodDefinition.Name is ".ctor") return;
+
+            MethodName methodName = MethodNameFromDefinition(methodDefinition);
+
+            string methodFqn = $"{((ClassName)methodName.ContainmentParent).FullyQualifiedName}.{methodName.ShortName}";
+            if (MethodsToSkip.Contains(methodFqn)) return;
+
+            // get body and processor for code injection
+            MethodBody body = methodDefinition.Body;
+            if (body == null)
             {
+                Debug.Log($"Missing body for: {methodDefinition.FullName}");
                 return;
             }
-
-            MethodBody body = methodDefinition.Body;
             ILProcessor bodyProcessor = body.GetILProcessor();
 
-            // Start of method
+            // Inject at the start of the function
+            // see: https://en.wikipedia.org/wiki/List_of_CIL_instructions
             {
-                Instruction _00 = Instruction.Create(OpCodes.Ldstr, methodDefinition.DeclaringType.Name + ":" + methodDefinition.Name);
-                Instruction _01 = Instruction.Create(OpCodes.Ldarg_0);
-                Instruction _02 = Instruction.Create(OpCodes.Call, methodDefinition.Module.ImportReference(m_GetGameObjectMethodRef));
-                Instruction _03 = Instruction.Create(OpCodes.Call, methodDefinition.Module.ImportReference(m_BeginSampleWithGameObjectMethodRef));
-
-                bodyProcessor.InsertBefore(body.Instructions[0], _00);
-                bodyProcessor.InsertAfter(_00, _01);
-                bodyProcessor.InsertAfter(_01, _02);
-                bodyProcessor.InsertAfter(_02, _03);
-            }
-            // Loop over all types and insert end sample before return
-            for(int i = 0; i < body.Instructions.Count; i++)
-            {
-                if(body.Instructions[i].OpCode == OpCodes.Ret)
+                List<Instruction> preEntryInstructions;
+                if (methodDefinition.IsStatic)
                 {
-                    Instruction _00 = Instruction.Create(OpCodes.Call, methodDefinition.Module.ImportReference(m_EndSampleMethodRef));
-                    bodyProcessor.InsertBefore(body.Instructions[i], _00);
-                    i++;
+                    preEntryInstructions = new()
+                    {
+                        Instruction.Create(OpCodes.Nop),
+                        Instruction.Create(OpCodes.Call, onStaticEntryMethodRef),
+                        Instruction.Create(OpCodes.Nop)
+                    };
+                }
+                else
+                {
+                    preEntryInstructions = new()
+                    {
+                        Instruction.Create(OpCodes.Nop),
+                        // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
+                        Instruction.Create(OpCodes.Ldarg_0),
+                        Instruction.Create(OpCodes.Call, onInstanceEntryMethodRef),
+                        Instruction.Create(OpCodes.Nop)
+                    };
+                }
+
+                Instruction firstInstruction = preEntryInstructions.First();
+                Instruction lastInserted = firstInstruction;
+
+                bodyProcessor.InsertBefore(body.Instructions.First(), firstInstruction);
+                for (int ii = 1; ii < preEntryInstructions.Count; ii++)
+                {
+                    Instruction toInsert = preEntryInstructions[ii];
+                    bodyProcessor.InsertAfter(lastInserted, toInsert);
+                    lastInserted = toInsert;
                 }
             }
 
-            methodDefinition.CustomAttributes.Remove(profileSample);
+            // [Normal part of function]
+
+            // Inject at the end
+            {
+                List<Instruction> exitInstructions;
+                if (methodDefinition.IsStatic)
+                {
+                    exitInstructions = new()
+                    {
+                        Instruction.Create(OpCodes.Nop),
+                        Instruction.Create(OpCodes.Call, onStaticExitMethodRef),
+                        Instruction.Create(OpCodes.Nop)
+                    };
+                }
+                else
+                {
+                    exitInstructions = new()
+                    {
+                        Instruction.Create(OpCodes.Nop),
+                        // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
+                        Instruction.Create(OpCodes.Ldarg_0),
+                        Instruction.Create(OpCodes.Call, onInstanceExitMethodRef),
+                        Instruction.Create(OpCodes.Nop)
+                    };
+                }
+
+                Instruction firstInstruction = exitInstructions.First();
+                Instruction lastInserted = firstInstruction;
+
+                bodyProcessor.InsertBefore(body.Instructions.Last(), firstInstruction);
+                for (int ii = 1; ii < exitInstructions.Count; ii++)
+                {
+                    Instruction toInsert = exitInstructions[ii];
+                    bodyProcessor.InsertAfter(lastInserted, toInsert);
+                    lastInserted = toInsert;
+                }
+            }
+        }
+        
+        static MethodName MethodNameFromDefinition(MethodDefinition methodDefinition)
+        {
+            string methodNameString = methodDefinition.Name;
+            if (methodNameString == ".ctor")
+            {
+                methodNameString = methodDefinition.DeclaringType.Name;
+            }
+            
+            string classNameString = methodDefinition.DeclaringType.FullName;
+            
+            string namespaceName = methodDefinition.DeclaringType.Namespace;
+            if (!string.IsNullOrEmpty(namespaceName))
+            {
+                classNameString = classNameString[(namespaceName.Length + 1)..];
+            }
+            else if (classNameString.Contains('.'))
+            {
+                // inner classes don't have namespaces defined, even if they are in a namespace
+                namespaceName = classNameString[..classNameString.LastIndexOf('.')];
+                classNameString = classNameString[(classNameString.LastIndexOf('.') + 1)..];
+            }
+
+            classNameString = classNameString.Replace('/', '$'); // inner class separator
+            
+            string javaReturnType = $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runitme-to-unity
+
+            ClassName parentClass = new ClassName(
+                new FileName(""),
+                new PackageName(namespaceName),
+                classNameString);
+            MethodName methodName = new MethodName(
+                parentClass,
+                methodNameString,
+                javaReturnType,
+                methodDefinition.Parameters.Select(x => new Argument(x.Name, TypeName.For(x.ParameterType.Name))));
+            return methodName;
+        }
+        
+        static bool CheckMonoBehaviour(TypeDefinition typeDefinition)
+        {
+            while (true)
+            {
+                try
+                {
+                    TypeDefinition baseDef = typeDefinition.BaseType?.Resolve();
+                    if (baseDef == null)
+                    {
+                        return false;
+                    }
+
+                    if (baseDef.Name == "MonoBehaviour")
+                    {
+                        return true;
+                    }
+
+                    typeDefinition = baseDef;
+                }
+                catch (AssemblyResolutionException e)
+                {
+                    Debug.Log($"Could not resolve MonoBehaviour type: {typeDefinition.FullName} {e.Message}");
+                    return false;
+                }
+            }
         }
     }
 }

@@ -1,10 +1,10 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor
 {
     [InitializeOnLoad]
-    internal class Constants
+    class Constants
     {
         /// <summary>
         /// Gives us access to the data path that can be accessed off the main thread. 

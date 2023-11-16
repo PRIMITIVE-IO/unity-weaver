@@ -1,13 +1,13 @@
 ﻿
 using Mono.Cecil;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Implementations
 {
     public struct FieldImplementation
     {
         public FieldReference reference;
         public FieldDefinition definition;
-        private readonly ModuleDefinition m_Module;
+        readonly ModuleDefinition m_Module;
 
         public FieldImplementation(ModuleDefinition module, FieldDefinition fieldDefinition)
         {

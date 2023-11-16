@@ -1,10 +1,13 @@
 ﻿using System;
-using UnityEngine;
-using Mono.Cecil;
 using System.Reflection;
+using Mono.Cecil;
+using UnityEngine;
+using Weaver.Editor.Settings;
+using Weaver.Editor.Utility_Types;
+using Weaver.Editor.Utility_Types.Logging;
 using Object = UnityEngine.Object;
 
-namespace Weaver
+namespace Weaver.Editor
 {
     [Flags]
     public enum DefinitionType
@@ -21,72 +24,49 @@ namespace Weaver
     public abstract class WeaverComponent : ScriptableObject, ILogable
     {
         // Hidden for now
-        [SerializeField, HideInInspector]
-        private bool m_IsActive = true;
-        [SerializeField, HideInInspector]
-        private ScriptingSymbols m_RequiredScriptingSymbols;
+        [SerializeField, HideInInspector] bool m_IsActive = true;
+        [SerializeField, HideInInspector] ScriptingSymbols m_RequiredScriptingSymbols;
 
-        private ModuleDefinition m_ActiveModule;
+        ModuleDefinition m_ActiveModule;
         public abstract string ComponentName { get; }
-        private Log m_Log;
+        Log m_Log;
 
-        public bool isActive
-        {
-            get { return m_IsActive && m_RequiredScriptingSymbols.isActive; }
-        }
+        public bool isActive => m_IsActive && m_RequiredScriptingSymbols.isActive;
 
         /// <summary>
         /// Returns back the type system for the module
         /// currently being edited. If we are not editing a module this
         /// returns null.
         /// </summary>
-        public TypeSystem typeSystem
-        {
-            get { return m_ActiveModule == null ? null : m_ActiveModule.TypeSystem; }
-        }
+        public TypeSystem typeSystem => m_ActiveModule?.TypeSystem;
 
         /// <summary>
         /// Returns back the type of definitions this component modifies. 
         /// </summary>
-        public virtual DefinitionType EffectedDefintions
-        {
-            get
-            {
-                return DefinitionType.None;
-            }
-        }
+        public virtual DefinitionType AffectedDefinitions => DefinitionType.None;
 
         /// <summary>
         /// The context object for our logging. 
         /// </summary>
-        public Object context
-        {
-            get
-            {
-                return this;
-            }
-        }
+        public Object context => this;
 
         /// <summary>
         /// Returns back the label we use for our logs.
         /// </summary>
-        public string label
-        {
-            get { return GetType().Name; }
-        }
+        public string label => GetType().Name;
 
-        private void OnEnable()
+        void OnEnable()
         {
             m_RequiredScriptingSymbols.ValidateSymbols();
         }
 
         /// <summary>
-        /// Returns true if this addin effects the definition
+        /// Returns true if this addin affects the definition
         /// of a type. 
         /// </summary>
-        public bool EffectsDefintion(DefinitionType type)
+        public bool AffectsDefintion(DefinitionType type)
         {
-            return (type & EffectedDefintions) == type;
+            return (type & AffectedDefinitions) == type;
         }
 
         /// <summary>
@@ -175,110 +155,62 @@ namespace Weaver
         #region -= Import Methods =-
         public TypeReference Import(TypeReference type)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(type);
+            return m_ActiveModule?.ImportReference(type);
         }
 
         public TypeReference Import(Type type, IGenericParameterProvider context)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(type);
+            return m_ActiveModule?.ImportReference(type);
         }
 
         public FieldReference Import(FieldInfo field)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(field);
+            return m_ActiveModule?.ImportReference(field);
         }
 
         public FieldReference Import(FieldInfo field, IGenericParameterProvider context)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(field);
+            return m_ActiveModule?.ImportReference(field);
         }
 
         public MethodReference Import(MethodBase method)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(method);
+            return m_ActiveModule?.ImportReference(method);
         }
 
         public MethodReference Import(MethodBase method, IGenericParameterProvider context)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(method, context);
+            return m_ActiveModule?.ImportReference(method, context);
         }
 
         public TypeReference Import(TypeReference type, IGenericParameterProvider context)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(type, context);
+            return m_ActiveModule?.ImportReference(type, context);
         }
 
         public TypeReference Import(Type type)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(type);
+            return m_ActiveModule?.ImportReference(type);
         }
 
         public FieldReference Import(FieldReference field)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(field);
+            return m_ActiveModule?.ImportReference(field);
         }
 
         public MethodReference Import(MethodReference method)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(method);
+            return m_ActiveModule?.ImportReference(method);
         }
 
         public MethodReference Import(MethodReference method, IGenericParameterProvider context)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(method, context);
+            return m_ActiveModule?.ImportReference(method, context);
         }
 
         public FieldReference Import(FieldReference field, IGenericParameterProvider context)
         {
-            if (m_ActiveModule == null)
-            {
-                return null;
-            }
-            return m_ActiveModule.ImportReference(field, context);
+            return m_ActiveModule?.ImportReference(field, context);
         }
         #endregion
     }

@@ -1,8 +1,10 @@
 ﻿using Mono.Cecil;
 using Mono.Collections.Generic;
 using UnityEngine;
+using Weaver.Editor.Utility_Types;
+using Weaver.Editor.Utility_Types.Logging;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     [System.Serializable]
     public class ComponentController : SubObjectController<WeaverComponent>
@@ -11,7 +13,7 @@ namespace Weaver
         /// This is used to only loop over definition types that
         /// we are using. 
         /// </summary>
-        private DefinitionType m_ActiveDefinitions;
+        DefinitionType m_ActiveDefinitions;
 
         public int totalTypesVisited { get; private set; }
         public int totalMethodsVisited { get; private set; }
@@ -24,9 +26,9 @@ namespace Weaver
         public void Initialize(Object owner)
         {
             m_Owner = owner;
-            for (int i = 0; i < m_SubObjects.Count; i++)
+            foreach (WeaverComponent weaverComponent in m_SubObjects)
             {
-                m_ActiveDefinitions |= m_SubObjects[i].EffectedDefintions;
+                m_ActiveDefinitions |= weaverComponent.AffectedDefinitions;
             }
         }
 
@@ -92,6 +94,8 @@ namespace Weaver
                     VisitFields(typeCollection[typeIndex].Fields);
                     // visit Properties
                     VisitProperties(typeCollection[typeIndex].Properties);
+                    // Visit Nested Types
+                    VisitTypes(typeCollection[typeIndex].NestedTypes);
                     // Increase count
                     totalTypesVisited++;
                 }

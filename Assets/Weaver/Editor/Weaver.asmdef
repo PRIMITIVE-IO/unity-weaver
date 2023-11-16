@@ -1,8 +1,6 @@
 {
     "name": "Weaver",
-    "references": [
-        "GUID:b51dadc5ea53a604eaad6d735bda7cda"
-    ],
+    "references": [],
     "includePlatforms": [
         "Editor"
     ],
@@ -13,9 +11,11 @@
         "Mono.Cecil.dll",
         "Mono.Cecil.Pdb.dll",
         "Mono.Cecil.Mdb.dll",
-        "Mono.Cecil.Rocks.dll"
+        "Mono.Cecil.Rocks.dll",
+        "Mono.Data.Sqlite.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],
-    "versionDefines": []
+    "versionDefines": [],
+    "noEngineReferences": false
 }

@@ -1,12 +1,12 @@
 ﻿using Mono.Cecil;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Implementations
 {
     public struct MethodImplementation
     {
         public MethodReference reference;
         public MethodDefinition definition;
-        private readonly ModuleDefinition m_Module;
+        readonly ModuleDefinition m_Module;
 
         public MethodImplementation(ModuleDefinition module, MethodDefinition methodDefinition)
         {

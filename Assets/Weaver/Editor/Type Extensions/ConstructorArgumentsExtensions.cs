@@ -1,21 +1,19 @@
-﻿using Mono.Cecil;
+﻿using System.Linq;
+using Mono.Cecil;
 
-namespace Weaver.Extensions
+namespace Weaver.Editor.Type_Extensions
 {
     public static class ConstructorArguments
     {
         public static T GetValue<T>(this CustomAttribute customAttribute, string propertyName)
         {
-            for (int i = 0; i < customAttribute.Properties.Count; i++)
+            foreach (CustomAttributeNamedArgument argument in customAttribute.Properties
+                         .Where(x => string.Equals(propertyName, x.Name, System.StringComparison.Ordinal)))
             {
-                CustomAttributeNamedArgument arguement = customAttribute.Properties[i];
-                if (string.Equals(propertyName, arguement.Name, System.StringComparison.Ordinal))
-                {
-                    return (T)arguement.Argument.Value;
-                }
-
+                return (T)argument.Argument.Value;
             }
-            return default(T);
+
+            return default;
         }
     }
 }

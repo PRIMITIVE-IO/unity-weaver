@@ -1,7 +1,7 @@
-﻿using Mono.Cecil;
-using System;
+﻿using System;
+using Mono.Cecil;
 
-namespace Weaver.Extensions
+namespace Weaver.Editor.Type_Extensions
 {
     public static class TypeDefinitionExtensions
     {

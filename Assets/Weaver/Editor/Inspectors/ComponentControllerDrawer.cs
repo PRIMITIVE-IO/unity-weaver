@@ -1,25 +1,27 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditorInternal;
-using System;
-using System.Collections.Generic;
+using UnityEngine;
+using Weaver.Editor.Settings;
+using Weaver.Editor.Utility_Types.Reflected_Members;
 using Object = UnityEngine.Object;
 
-namespace Weaver.Editors
+namespace Weaver.Editor.Inspectors
 {
     [CustomPropertyDrawer(typeof(ComponentController))]
     public class ComponentControllerDrawer : PropertyDrawer
     {
-        private SerializedProperty m_SubObjects;
-        private ReflectedMethod m_AddItemMethod;
-        private ReflectedMethod m_RemoveItemMethod;
-        private ReflectedMethod m_HasInstanceOfTypeMethod;
-        private ReorderableList m_ReoderableList;
-        private bool m_Initialized = false;
-        private Rect m_Position;
-        private float m_Height;
+        SerializedProperty m_SubObjects;
+        ReflectedMethod m_AddItemMethod;
+        ReflectedMethod m_RemoveItemMethod;
+        ReflectedMethod m_HasInstanceOfTypeMethod;
+        ReorderableList m_ReoderableList;
+        bool m_Initialized = false;
+        Rect m_Position;
+        float m_Height;
 
-        private void Initialize(SerializedProperty property)
+        void Initialize(SerializedProperty property)
         {
             if (!m_Initialized)
             {
@@ -38,7 +40,7 @@ namespace Weaver.Editors
             }
         }
 
-        private void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+        void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
         {
             rect.height = EditorGUIUtility.singleLineHeight;
             rect.y += 2.0f;
@@ -53,12 +55,12 @@ namespace Weaver.Editors
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void OnDrawHeader(Rect rect)
+        void OnDrawHeader(Rect rect)
         {
             GUI.Label(rect, WeaverContent.settingsComponentsTitle);
         }
 
-        private void OnComponentRemoved(ReorderableList list)
+        void OnComponentRemoved(ReorderableList list)
         {
             Object removedObject = m_SubObjects.GetArrayElementAtIndex(list.index).objectReferenceValue;
             if (removedObject != null)
@@ -69,7 +71,7 @@ namespace Weaver.Editors
             OnComponentAddedOrRemoved();
         }
 
-        private void OnComponentAdded(ReorderableList list)
+        void OnComponentAdded(ReorderableList list)
         {
             // Create the generic menu
             GenericMenu componentMenu = new GenericMenu();
@@ -100,13 +102,13 @@ namespace Weaver.Editors
             componentMenu.DropDown(menuDisplayRect);
         }
 
-        private void OnTypeAdded(object argument)
+        void OnTypeAdded(object argument)
         {
             m_AddItemMethod.Invoke(argument);
             OnComponentAddedOrRemoved();
         }
 
-        private void OnComponentAddedOrRemoved()
+        void OnComponentAddedOrRemoved()
         {
             SerializedObject serializedObject = m_SubObjects.serializedObject;
             serializedObject.ApplyModifiedProperties();

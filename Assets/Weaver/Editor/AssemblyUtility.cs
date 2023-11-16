@@ -6,12 +6,13 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using Weaver.Editor.Utility_Types;
 
-namespace Weaver
+namespace Weaver.Editor
 {
     public class AssemblyUtility
     {
-        private static IList<Assembly> m_Assemblies;
+        static IList<Assembly> m_Assemblies;
         
         /// <summary>
         /// Returns the cached array of user assemblies. If you wan to refresh

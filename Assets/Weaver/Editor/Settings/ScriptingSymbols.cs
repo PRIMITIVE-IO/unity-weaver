@@ -2,23 +2,19 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     [Serializable]
     public struct ScriptingSymbols
     {
         [SerializeField]
         public string value;
-        [SerializeField]
-        private bool m_IsActive;
+        [SerializeField] bool m_IsActive;
 
         /// <summary>
         /// Returns back true if the symbols are defined. 
         /// </summary>
-        public bool isActive
-        {
-            get { return m_IsActive; }
-        }
+        public bool isActive => m_IsActive;
 
         public void ValidateSymbols()
         {

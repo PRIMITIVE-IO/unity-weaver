@@ -1,7 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types
 {
     public class MemberLocation
     {

@@ -1,28 +1,21 @@
-﻿using UnityEngine;
-using UnityEditor;
+﻿using System.IO;
 using UnityEditorInternal;
-using System.IO;
+using UnityEngine;
 
-namespace Weaver
+namespace Weaver.Editor.Settings
 {
     // TODO: Make scriptable singleton
     public abstract class SerializedWeaver<T> : ScriptableObject where T : SerializedWeaver<T>
     {
-        private const string FILE_NAME = "Weaver";
-        private const string EXTENSION = ".asset";
+        const string FILE_NAME = "Weaver";
+        const string EXTENSION = ".asset";
 
-        private static T m_Instance;
+        static T m_Instance;
 
         /// <summary>
         /// Returns the save path of this object on disk. 
         /// </summary>
-        protected static string savePath
-        {
-            get
-            {
-                return Application.dataPath.Replace("/Assets", "/ProjectSettings/" + FILE_NAME + EXTENSION);
-            }
-        }
+        protected static string savePath => Application.dataPath.Replace("/Assets", "/ProjectSettings/" + FILE_NAME + EXTENSION);
 
         /// <summary>
         /// Loads the current instance of Weaver from disk

@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using JetBrains.Annotations;
-using Debug = UnityEngine.Debug;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
 
-namespace Weaver
+namespace Weaver.Editor.Utility_Types.Logging
 {
     [Serializable]
     public class Log
@@ -22,20 +22,17 @@ namespace Weaver
             public MessageType type;
         }
 
-        private ILogable m_Context;
+        ILogable m_Context;
         [SerializeField]
         [UsedImplicitly]
-        private List<Entry> m_Entries = new List<Entry>();
+        List<Entry> m_Entries = new List<Entry>();
 
-        public List<Entry> entries
-        {
-            get { return m_Entries; }
-        }
+        public List<Entry> entries => m_Entries;
 
         public ILogable context
         {
-            get { return m_Context; }
-            set { m_Context = value; }
+            get => m_Context;
+            set => m_Context = value;
         }
         /// <summary>
         /// Creates a new instance of a log.
@@ -101,19 +98,19 @@ namespace Weaver
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        private string FormatLabel(string message, string fileName, int lineNumber, MessageType logType)
+        string FormatLabel(string message, string fileName, int lineNumber, MessageType logType)
         {
             switch (logType)
             {
                 case MessageType.Warning:
-                    return string.Format("<color=yellow>[{0}:{1}]: {2}</color>", fileName, lineNumber, message);
+                    return $"<color=yellow>[{fileName}:{lineNumber}]: {message}</color>";
                 case MessageType.Error:
-                    return string.Format("<color=red>[{0}:{1}]: {2}</color>", fileName, lineNumber, message);
+                    return $"<color=red>[{fileName}:{lineNumber}]: {message}</color>";
             }
-            return string.Format("[{0}:{1}]: {2}", fileName, lineNumber, message);
+            return $"[{fileName}:{lineNumber}]: {message}";
         }
 
-        private void AddEntry(string context, string message, MessageType logType, int stackFrameDiscard)
+        void AddEntry(string context, string message, MessageType logType, int stackFrameDiscard)
         {
             // Get our stack frame
             StackFrame frame = new StackFrame(stackFrameDiscard, true);
