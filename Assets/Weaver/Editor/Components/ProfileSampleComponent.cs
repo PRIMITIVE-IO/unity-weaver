@@ -24,28 +24,27 @@ namespace Weaver.Editor.Components
         bool isMonoBehaviour = false;
 
         static List<string> TypesToSkip => WeaverSettings.Instance != null
-            ? WeaverSettings.Instance.m_TypesToSkip 
+            ? WeaverSettings.Instance.m_TypesToSkip
             : new List<string>();
 
-        static List<string> MethodsToSkip => WeaverSettings.Instance != null 
-            ? WeaverSettings.Instance.m_MethodsToSkip 
+        static List<string> MethodsToSkip => WeaverSettings.Instance != null
+            ? WeaverSettings.Instance.m_MethodsToSkip
             : new List<string>();
 
         public override void VisitModule(ModuleDefinition moduleDefinition)
         {
-            // get reference to Debug.Log so that it can be called in the opcode with a string argument
             TypeReference primitiveTracerRef = moduleDefinition.ImportReference(typeof(PrimitiveTracker));
             TypeDefinition primitiveTracerDef = primitiveTracerRef.Resolve();
-            
+
             onInstanceEntryMethodRef = moduleDefinition.ImportReference(
                 primitiveTracerDef.GetMethod("OnInstanceEntry", 1));
-            
+
             onInstanceExitMethodRef = moduleDefinition.ImportReference(
                 primitiveTracerDef.GetMethod("OnInstanceExit", 1));
-            
+
             onStaticEntryMethodRef = moduleDefinition.ImportReference(
                 primitiveTracerDef.GetMethod("OnStaticEntry"));
-            
+
             onStaticExitMethodRef = moduleDefinition.ImportReference(
                 primitiveTracerDef.GetMethod("OnStaticExit"));
         }
@@ -53,7 +52,9 @@ namespace Weaver.Editor.Components
         public override void VisitType(TypeDefinition typeDefinition)
         {
             // don't trace self
-            skip = typeDefinition.Namespace.StartsWith("Weaver")  || typeDefinition.Namespace.StartsWith("Unity") || TypesToSkip.Contains(typeDefinition.FullName);
+            skip = typeDefinition.Namespace.StartsWith("Weaver") ||
+                   typeDefinition.Namespace.StartsWith("Unity") ||
+                   TypesToSkip.Contains(typeDefinition.FullName);
 
             isMonoBehaviour = CheckMonoBehaviour(typeDefinition);
         }
@@ -79,84 +80,81 @@ namespace Weaver.Editor.Components
                 Debug.Log($"Missing body for: {methodDefinition.FullName}");
                 return;
             }
+
             ILProcessor bodyProcessor = body.GetILProcessor();
 
             // Inject at the start of the function
             // see: https://en.wikipedia.org/wiki/List_of_CIL_instructions
+            List<Instruction> preEntryInstructions;
+            if (methodDefinition.IsStatic)
             {
-                List<Instruction> preEntryInstructions;
-                if (methodDefinition.IsStatic)
+                preEntryInstructions = new List<Instruction>
                 {
-                    preEntryInstructions = new()
-                    {
-                        Instruction.Create(OpCodes.Nop),
-                        Instruction.Create(OpCodes.Call, onStaticEntryMethodRef),
-                        Instruction.Create(OpCodes.Nop)
-                    };
-                }
-                else
+                    Instruction.Create(OpCodes.Nop),
+                    Instruction.Create(OpCodes.Call, onStaticEntryMethodRef),
+                    Instruction.Create(OpCodes.Nop)
+                };
+            }
+            else
+            {
+                preEntryInstructions = new List<Instruction>
                 {
-                    preEntryInstructions = new()
-                    {
-                        Instruction.Create(OpCodes.Nop),
-                        // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
-                        Instruction.Create(OpCodes.Ldarg_0),
-                        Instruction.Create(OpCodes.Call, onInstanceEntryMethodRef),
-                        Instruction.Create(OpCodes.Nop)
-                    };
-                }
+                    Instruction.Create(OpCodes.Nop),
+                    // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
+                    Instruction.Create(OpCodes.Ldarg_0),
+                    Instruction.Create(OpCodes.Call, onInstanceEntryMethodRef),
+                    Instruction.Create(OpCodes.Nop)
+                };
+            }
 
-                Instruction firstInstruction = preEntryInstructions.First();
-                Instruction lastInserted = firstInstruction;
+            Instruction firstPreEntryInstruction = preEntryInstructions.First();
+            Instruction lastPreEntryInserted = firstPreEntryInstruction;
 
-                bodyProcessor.InsertBefore(body.Instructions.First(), firstInstruction);
-                for (int ii = 1; ii < preEntryInstructions.Count; ii++)
-                {
-                    Instruction toInsert = preEntryInstructions[ii];
-                    bodyProcessor.InsertAfter(lastInserted, toInsert);
-                    lastInserted = toInsert;
-                }
+            bodyProcessor.InsertBefore(body.Instructions.First(), firstPreEntryInstruction);
+            for (int ii = 1; ii < preEntryInstructions.Count; ii++)
+            {
+                Instruction toInsert = preEntryInstructions[ii];
+                bodyProcessor.InsertAfter(lastPreEntryInserted, toInsert);
+                lastPreEntryInserted = toInsert;
             }
 
             // [Normal part of function]
 
             // Inject at the end
+            List<Instruction> exitInstructions;
+            if (methodDefinition.IsStatic)
             {
-                List<Instruction> exitInstructions;
-                if (methodDefinition.IsStatic)
+                exitInstructions = new List<Instruction>
                 {
-                    exitInstructions = new()
-                    {
-                        Instruction.Create(OpCodes.Nop),
-                        Instruction.Create(OpCodes.Call, onStaticExitMethodRef),
-                        Instruction.Create(OpCodes.Nop)
-                    };
-                }
-                else
+                    Instruction.Create(OpCodes.Nop),
+                    Instruction.Create(OpCodes.Call, onStaticExitMethodRef),
+                    Instruction.Create(OpCodes.Nop)
+                };
+            }
+            else
+            {
+                exitInstructions = new List<Instruction>
                 {
-                    exitInstructions = new()
-                    {
-                        Instruction.Create(OpCodes.Nop),
-                        // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
-                        Instruction.Create(OpCodes.Ldarg_0),
-                        Instruction.Create(OpCodes.Call, onInstanceExitMethodRef),
-                        Instruction.Create(OpCodes.Nop)
-                    };
-                }
+                    Instruction.Create(OpCodes.Nop),
+                    // Loads 'this' (0-th arg of current method) to stack in order to get the instance ID of the object
+                    Instruction.Create(OpCodes.Ldarg_0),
+                    Instruction.Create(OpCodes.Call, onInstanceExitMethodRef),
+                    Instruction.Create(OpCodes.Nop)
+                };
+            }
 
-                Instruction firstInstruction = exitInstructions.First();
-                Instruction lastInserted = firstInstruction;
+            Instruction firstExitInstruction = exitInstructions.First();
+            Instruction lastExitInserted = firstExitInstruction;
 
-                bodyProcessor.InsertBefore(body.Instructions.Last(), firstInstruction);
-                for (int ii = 1; ii < exitInstructions.Count; ii++)
-                {
-                    Instruction toInsert = exitInstructions[ii];
-                    bodyProcessor.InsertAfter(lastInserted, toInsert);
-                    lastInserted = toInsert;
-                }
+            bodyProcessor.InsertBefore(body.Instructions.Last(), firstExitInstruction);
+            for (int ii = 1; ii < exitInstructions.Count; ii++)
+            {
+                Instruction toInsert = exitInstructions[ii];
+                bodyProcessor.InsertAfter(lastExitInserted, toInsert);
+                lastExitInserted = toInsert;
             }
         }
-        
+
         static MethodName MethodNameFromDefinition(MethodDefinition methodDefinition)
         {
             string methodNameString = methodDefinition.Name;
@@ -164,9 +162,9 @@ namespace Weaver.Editor.Components
             {
                 methodNameString = methodDefinition.DeclaringType.Name;
             }
-            
+
             string classNameString = methodDefinition.DeclaringType.FullName;
-            
+
             string namespaceName = methodDefinition.DeclaringType.Namespace;
             if (!string.IsNullOrEmpty(namespaceName))
             {
@@ -180,8 +178,9 @@ namespace Weaver.Editor.Components
             }
 
             classNameString = classNameString.Replace('/', '$'); // inner class separator
-            
-            string javaReturnType = $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runitme-to-unity
+
+            string javaReturnType =
+                $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runitme-to-unity
 
             ClassName parentClass = new ClassName(
                 new FileName(""),
@@ -194,7 +193,7 @@ namespace Weaver.Editor.Components
                 methodDefinition.Parameters.Select(x => new Argument(x.Name, TypeName.For(x.ParameterType.Name))));
             return methodName;
         }
-        
+
         static bool CheckMonoBehaviour(TypeDefinition typeDefinition)
         {
             while (true)
