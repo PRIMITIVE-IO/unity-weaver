@@ -74,7 +74,7 @@ namespace Weaver.Editor
                 }
 
                 string codeBase = Assembly.GetExecutingAssembly().CodeBase;
-                UriBuilder uri = new UriBuilder(codeBase);
+                UriBuilder uri = new(codeBase);
                 string path = Uri.UnescapeDataString(uri.Path);
                 return Path.Combine(Path.GetDirectoryName(path), $"{DateTime.Now.ToString("yyyyMMddHHmmssfff")}.db");
             }
@@ -125,7 +125,7 @@ namespace Weaver.Editor
 
             long objectInstance = objectIDGenerator.GetId(traceObject, out bool firstTime);
 
-            StackTrace stackTrace = new StackTrace(false);
+            StackTrace stackTrace = new(false);
             StackSort(stackTrace, objectInstance);
         }
 
@@ -134,7 +134,7 @@ namespace Weaver.Editor
         {
             if (!CheckPlayingAndInitialize()) return;
 
-            StackTrace stackTrace = new StackTrace(false);
+            StackTrace stackTrace = new(false);
             StackSort(stackTrace);
         }
 
@@ -144,7 +144,7 @@ namespace Weaver.Editor
             if (!CheckPlayingAndInitialize()) return;
 
             long objectInstance = objectIDGenerator.GetId(traceObject, out bool firstTime);
-            StackTrace stackTrace = new StackTrace(false);
+            StackTrace stackTrace = new(false);
             StackPop(stackTrace, objectInstance);
         }
 
@@ -153,7 +153,7 @@ namespace Weaver.Editor
         {
             if (!CheckPlayingAndInitialize()) return;
 
-            StackTrace stackTrace = new StackTrace(false);
+            StackTrace stackTrace = new(false);
             StackPop(stackTrace);
         }
 
@@ -399,11 +399,11 @@ namespace Weaver.Editor
             }
 
             string returnType = "Void"; // TODO
-            ClassName parentClass = new ClassName(
+            ClassName parentClass = new(
                 new FileName(""),
                 new PackageName(namespaceName),
                 classFqn);
-            MethodName methodName = new MethodName(
+            MethodName methodName = new(
                 parentClass,
                 methodNameString,
                 $"()L{returnType};", // TODO: Java format

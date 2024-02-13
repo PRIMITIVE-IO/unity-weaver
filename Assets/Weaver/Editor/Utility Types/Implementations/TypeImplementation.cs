@@ -30,21 +30,21 @@ namespace Weaver.Editor.Utility_Types.Implementations
         public MethodImplementation GetMethod(string methodName)
         {
             MethodDefinition methodDefinition = definition.GetMethod(methodName);
-            MethodImplementation methodImplementation = new MethodImplementation(m_Module,methodDefinition);
+            MethodImplementation methodImplementation = new(m_Module,methodDefinition);
             return methodImplementation;
         }
 
         public MethodImplementation GetMethod(string methodName, params Type[] parameterTypes)
         {
             MethodDefinition methodDefinition = definition.GetMethod(methodName, parameterTypes);
-            MethodImplementation methodImplementation = new MethodImplementation(m_Module, methodDefinition);
+            MethodImplementation methodImplementation = new(m_Module, methodDefinition);
             return methodImplementation;
         }
 
         public PropertyImplementation GetProperty(string methodName)
         {
             PropertyDefinition propertyDefinition = definition.GetProperty(methodName);
-            PropertyImplementation methodImplementation = new PropertyImplementation(m_Module, propertyDefinition);
+            PropertyImplementation methodImplementation = new(m_Module, propertyDefinition);
             return methodImplementation;
         }
     }

@@ -77,7 +77,7 @@ namespace Weaver.Editor
             long numExecutionsInWindow = window.Add(method);
             if (numExecutionsInWindow > numCallsInWindowForRepetitiveness)
             {
-                ActiveRepetition repetition = new ActiveRepetition(method);
+                ActiveRepetition repetition = new(method);
                 repetition.OnEnter();
                 activelyRepetitiveMethodsByName.TryAdd(method, repetition);
 

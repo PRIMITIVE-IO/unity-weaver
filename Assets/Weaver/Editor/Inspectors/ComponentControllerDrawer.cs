@@ -45,7 +45,7 @@ namespace Weaver.Editor.Inspectors
             rect.height = EditorGUIUtility.singleLineHeight;
             rect.y += 2.0f;
             SerializedProperty element = m_SubObjects.GetArrayElementAtIndex(index);
-            SerializedObject serializedObject = new SerializedObject(element.objectReferenceValue);
+            SerializedObject serializedObject = new(element.objectReferenceValue);
             rect.width -= 20f;
             GUI.Label(rect, element.objectReferenceValue.name, EditorStyles.textArea);
             rect.x += rect.width;
@@ -74,7 +74,7 @@ namespace Weaver.Editor.Inspectors
         void OnComponentAdded(ReorderableList list)
         {
             // Create the generic menu
-            GenericMenu componentMenu = new GenericMenu();
+            GenericMenu componentMenu = new();
             // Get all the types that inherit from Weaver Component 
             IList<Type> componentTypes = AssemblyUtility.GetInheirtingTypesFromUserAssemblies<WeaverComponent>();
             // Loop over them all
@@ -84,7 +84,7 @@ namespace Weaver.Editor.Inspectors
                 // Check if we already have that type
                 if (m_HasInstanceOfTypeMethod.Invoke(type).AreEqual(false))
                 {
-                    GUIContent menuLabel = new GUIContent(type.Assembly.GetName().Name + "/" + type.Name);
+                    GUIContent menuLabel = new(type.Assembly.GetName().Name + "/" + type.Name);
                     componentMenu.AddItem(menuLabel, false, OnTypeAdded, type);
                 }
             }

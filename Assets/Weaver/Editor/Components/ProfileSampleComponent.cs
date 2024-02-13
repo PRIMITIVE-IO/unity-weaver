@@ -182,11 +182,11 @@ namespace Weaver.Editor.Components
             string javaReturnType =
                 $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runitme-to-unity
 
-            ClassName parentClass = new ClassName(
+            ClassName parentClass = new(
                 new FileName(""),
                 new PackageName(namespaceName),
                 classNameString);
-            MethodName methodName = new MethodName(
+            MethodName methodName = new(
                 parentClass,
                 methodNameString,
                 javaReturnType,

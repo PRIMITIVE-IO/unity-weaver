@@ -260,7 +260,7 @@ namespace Weaver.Editor.Settings
                 return;
             }
 
-            using (FileStream assemblyStream = new FileStream(assemblyPath, FileMode.Open, FileAccess.ReadWrite))
+            using (FileStream assemblyStream = new(assemblyPath, FileMode.Open, FileAccess.ReadWrite))
             {
                 using (ModuleDefinition moduleDefinition =
                        ModuleDefinition.ReadModule(assemblyStream, GetReaderParameters()))
@@ -270,7 +270,7 @@ namespace Weaver.Editor.Settings
                     m_Components.VisitModule(moduleDefinition, m_Log);
 
                     // Save 
-                    WriterParameters writerParameters = new WriterParameters()
+                    WriterParameters writerParameters = new()
                     {
                         WriteSymbols = true,
                         SymbolWriterProvider = new Mono.Cecil.Pdb.NativePdbWriterProvider()

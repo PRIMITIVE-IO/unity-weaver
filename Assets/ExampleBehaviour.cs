@@ -25,6 +25,6 @@ public class ExampleBehaviour : MonoBehaviour
     {
         Other();
         Other2();
-        ExampleClass exampleClass = new ExampleClass();
+        ExampleClass exampleClass = new();
     }
 }

@@ -7,7 +7,7 @@ namespace DefaultNamespace
             Other3();
             Other2();
             var x = GetNumber1();
-            InnerClass innerClass = new InnerClass();
+            InnerClass innerClass = new();
             innerClass.GetA();
         }
         
