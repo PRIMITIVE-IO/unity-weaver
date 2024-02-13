@@ -52,7 +52,8 @@ namespace Weaver.Editor.Components
         public override void VisitType(TypeDefinition typeDefinition)
         {
             // don't trace self
-            skip = typeDefinition.Namespace.StartsWith("Weaver") ||
+            skip = typeDefinition.IsValueType || // skip structs. the IL injection trips on them
+                   typeDefinition.Namespace.StartsWith("Weaver") ||
                    typeDefinition.Namespace.StartsWith("Unity") ||
                    TypesToSkip.Contains(typeDefinition.FullName);
 
@@ -180,7 +181,7 @@ namespace Weaver.Editor.Components
             classNameString = classNameString.Replace('/', '$'); // inner class separator
 
             string javaReturnType =
-                $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runitme-to-unity
+                $"()L{methodDefinition.ReturnType.Name};"; // TODO compatible with java runtime-to-unity
 
             ClassName parentClass = new(
                 new FileName(""),

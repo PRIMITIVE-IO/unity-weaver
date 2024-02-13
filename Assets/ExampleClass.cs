@@ -9,6 +9,7 @@ namespace DefaultNamespace
             var x = GetNumber1();
             InnerClass innerClass = new();
             innerClass.GetA();
+            Settings settings = new(1);
         }
         
         void Other3()
@@ -44,6 +45,15 @@ namespace DefaultNamespace
             string GetB()
             {
                 return "A";
+            }
+        }
+
+        struct Settings
+        {
+            private int A;
+            public Settings(int a)
+            {
+                A = a;
             }
         }
     }
