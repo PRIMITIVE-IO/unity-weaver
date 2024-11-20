@@ -76,7 +76,7 @@ namespace Weaver.Editor
                 string codeBase = Assembly.GetExecutingAssembly().CodeBase;
                 UriBuilder uri = new(codeBase);
                 string path = Uri.UnescapeDataString(uri.Path);
-                return Path.Combine(Path.GetDirectoryName(path), $"{DateTime.Now.ToString("yyyyMMddHHmmssfff")}.db");
+                return Path.Combine(Path.GetDirectoryName(path), $"{DateTime.Now:yyyyMMddHHmmssfff}.db");
             }
         }
 
@@ -107,13 +107,13 @@ namespace Weaver.Editor
             catch (UnityException e)
             {
                 // do nothing - trying to check from another thread or from MonoBehaviour constructor
+                return false;
             }
 
-            if (first)
-            {
-                Initialize();
-                first = false;
-            }
+            if (!first) return true;
+            
+            Initialize();
+            first = false;
 
             return true;
         }
@@ -169,6 +169,9 @@ namespace Weaver.Editor
             List<string> stackMethods = StackMethods(stackTrace);
             string topOfStackString = stackMethods.First();
             if (topOfStackString.StartsWith('<')) return; // anonymous method
+            if (topOfStackString.StartsWith("Microsoft.Unity.VisualStudio.Editor")) return; // this gets added by a dll
+            if (topOfStackString.StartsWith("UnityEditor")) return; // this gets added by a dll
+            if (topOfStackString.StartsWith("Packages.Rider.Editor")) return; // this gets added by a dll
             MethodName topOfStack = FromFQN(topOfStackString);
 
             activeRepetitions.OnMethodEnter(topOfStack, threadIncrementor);
@@ -218,17 +221,16 @@ namespace Weaver.Editor
                     continue;
                 }
 
-                if (stackFrame != null)
+                if (stackFrame == null) continue;
+                
+                string traceMethodName = stackFrame.GetMethod().Name;
+                string traceMethodDeclType = stackFrame.GetMethod().DeclaringType.FullName;
+                if (traceMethodName == ".ctor")
                 {
-                    string traceMethodName = stackFrame.GetMethod().Name;
-                    string traceMethodDeclType = stackFrame.GetMethod().DeclaringType.FullName;
-                    if (traceMethodName == ".ctor")
-                    {
-                        traceMethodName = stackFrame.GetMethod().DeclaringType.Name;
-                    }
-
-                    stackMethods.Add($"{traceMethodDeclType}.{traceMethodName}");
+                    traceMethodName = stackFrame.GetMethod().DeclaringType.Name;
                 }
+
+                stackMethods.Add($"{traceMethodDeclType}.{traceMethodName}");
             }
 
             return stackMethods;
@@ -282,20 +284,19 @@ namespace Weaver.Editor
         
         static void DequeueAndWrite()
         {
-            if (accumulatedEntries.Any())
+            if (!accumulatedEntries.Any()) return;
+            
+            List<Batch> copy = new();
+            while (accumulatedEntries.Any())
             {
-                List<Batch> copy = new();
-                while (accumulatedEntries.Any())
+                bool success = accumulatedEntries.TryDequeue(out Batch toAdd);
+                if (success)
                 {
-                    bool success = accumulatedEntries.TryDequeue(out Batch toAdd);
-                    if (success)
-                    {
-                        copy.Add(toAdd);
-                    }
+                    copy.Add(toAdd);
                 }
-
-                WriteAll(copy);
             }
+
+            WriteAll(copy);
         }
 
         static void WriteAll(IReadOnlyCollection<Batch> copy)
@@ -336,35 +337,34 @@ namespace Weaver.Editor
             
             activeRepetitions.OnMethodExit(topOfStack, threadIncrementor);
             callStacksByThreadId.TryGetValue(threadId, out ConcurrentStack<PrimitiveStackEntry>? stack);
-            if (stack != null)
+            
+            if (stack == null) return;
+            
+            int removeHashCode = primitiveStackEntry.GetHashCode();
+            int topHashCode = -1;
+            while (stack.Count > 0 && topHashCode != removeHashCode)
             {
-                int removeHashCode = primitiveStackEntry.GetHashCode();
-                int topHashCode = -1;
-                while (stack.Count > 0 && topHashCode != removeHashCode)
+                bool success = stack.TryPop(out PrimitiveStackEntry top);
+                if (success)
                 {
-                    bool success = stack.TryPop(out PrimitiveStackEntry top);
-                    if (success)
-                    {
-                        topHashCode = top.GetHashCode();
-                    }
-                }
-
-                if (!stack.Any())
-                {
-                    callStacksByThreadId.Remove(threadId, out ConcurrentStack<PrimitiveStackEntry> _);
-                    if (threadId == 1)
-                    {
-                        baseOfMainThread = "";
-                        // clear imposters
-                        foreach (int imposterThread in imposterThreads)
-                        {
-                            callStacksByThreadId.Remove(imposterThread, out ConcurrentStack<PrimitiveStackEntry> _);
-                        }
-
-                        imposterThreads.Clear();
-                    }
+                    topHashCode = top.GetHashCode();
                 }
             }
+
+            if (stack.Any()) return;
+            
+            callStacksByThreadId.Remove(threadId, out ConcurrentStack<PrimitiveStackEntry> _);
+            
+            if (threadId != 1) return;
+            
+            baseOfMainThread = "";
+            // clear imposters
+            foreach (int imposterThread in imposterThreads)
+            {
+                callStacksByThreadId.Remove(imposterThread, out ConcurrentStack<PrimitiveStackEntry> _);
+            }
+
+            imposterThreads.Clear();
         }
 
         static void Log(string methodName, long objectId, int threadId, bool isEntering)
