@@ -202,17 +202,17 @@ namespace Weaver.Editor.Settings
         /// Returns back an instance of our symbol reader for  
         /// </summary> 
         /// <returns></returns> 
-        private static ReaderParameters GetReaderParameters(string assemblyPath) 
-        { 
-            return new ReaderParameters() 
-            { 
-                ReadingMode = ReadingMode.Immediate, 
-                ReadWrite = true, 
-                AssemblyResolver = new WeaverAssemblyResolver(assemblyPath), 
-                ReadSymbols = true, 
-                SymbolReaderProvider = new PdbReaderProvider() 
-            }; 
-        } 
+        private static ReaderParameters GetReaderParameters(string assemblyPath)  
+        {  
+            return new ReaderParameters()  
+            {  
+                ReadingMode = ReadingMode.Immediate,  
+                ReadWrite = true,  
+                AssemblyResolver = new WeaverAssemblyResolver(assemblyPath),  
+                ReadSymbols = true,  
+                SymbolReaderProvider = new PdbReaderProvider()  
+            };  
+        }  
 
         /// <summary> 
         /// Returns back the instance of the symbol writer provide. 
@@ -235,8 +235,10 @@ namespace Weaver.Editor.Settings
             {
                 return;
             }
-            if (!this.m_WeavedAssemblies.Any(x => Path.GetFileName(x.GetSystemPath()) == Path.GetFileName(assemblyPath))) 
-                return; 
+
+            if (!this.m_WeavedAssemblies.Any(x =>
+                    Path.GetFileName(x.GetSystemPath()) == Path.GetFileName(assemblyPath)))
+                return;
 
             string name = Path.GetFileNameWithoutExtension(assemblyPath);
 
@@ -261,16 +263,17 @@ namespace Weaver.Editor.Settings
                 return;
             }
 
-            using (FileStream assemblyStream = new FileStream(assemblyPath, FileMode.Open, FileAccess.ReadWrite))
+            using (FileStream assemblyStream = new(assemblyPath, FileMode.Open, FileAccess.ReadWrite))
             {
-                using (ModuleDefinition moduleDefinition = ModuleDefinition.ReadModule(assemblyStream, GetReaderParameters(assemblyPath))) 
+                using (ModuleDefinition moduleDefinition =
+                       ModuleDefinition.ReadModule(assemblyStream, GetReaderParameters(assemblyPath)))
                 {
                     m_Components.Initialize(this);
 
                     m_Components.VisitModule(moduleDefinition, m_Log);
 
                     // Save 
-                    WriterParameters writerParameters = new WriterParameters()
+                    WriterParameters writerParameters = new()
                     {
                         WriteSymbols = true,
                         SymbolWriterProvider = new Mono.Cecil.Pdb.NativePdbWriterProvider()

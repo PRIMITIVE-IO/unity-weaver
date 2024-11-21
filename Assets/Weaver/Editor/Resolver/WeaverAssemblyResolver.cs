@@ -14,7 +14,8 @@ namespace Weaver
     {
         public WeaverAssemblyResolver(string assemblyPath)
         {
-            var asm = UnityEditor.Compilation.CompilationPipeline.GetAssemblies().FirstOrDefault(x => x.outputPath == assemblyPath);
+            var asm = UnityEditor.Compilation.CompilationPipeline.GetAssemblies()
+                .FirstOrDefault(x => x.outputPath == assemblyPath);
             List<string> dependencies = new()
             {
                 UnityEditorInternal.InternalEditorUtility.GetEngineCoreModuleAssemblyPath(),
@@ -26,6 +27,7 @@ namespace Weaver
                 if (dependencies.Contains(directory) == false)
                     dependencies.Add(directory);
             }
+
             if (dependencies != null)
             {
                 foreach (var str in dependencies)
@@ -33,10 +35,9 @@ namespace Weaver
                     AddSearchDirectory(str);
                 }
             }
+
             AddSearchDirectory(assemblyPath);
             AddSearchDirectory(Path.GetDirectoryName(EditorApplication.applicationPath) + "\\Data\\Managed");
         }
-
-
     }
 }

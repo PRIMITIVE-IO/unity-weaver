@@ -151,7 +151,7 @@ namespace Weaver.Editor
                 {
                     if (Directory.Exists(systemPath))
                     {
-                        DirectoryInfo directroyInfo = new DirectoryInfo(systemPath);
+                        DirectoryInfo directroyInfo = new(systemPath);
                         // Find all assemblies that are managed 
                         result.AddRange(from file in directroyInfo.GetFiles()
                                         where IsManagedAssembly(file.FullName)

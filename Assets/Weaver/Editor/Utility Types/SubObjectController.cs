@@ -15,7 +15,7 @@ namespace Weaver.Editor.Utility_Types
     public class SubObjectController<T> : IEnumerable<T>  where T : ScriptableObject
     {
         [SerializeField]
-        protected List<T> m_SubObjects = new List<T>();
+        protected List<T> m_SubObjects = new();
         [SerializeField]
         protected Object m_Owner; 
 

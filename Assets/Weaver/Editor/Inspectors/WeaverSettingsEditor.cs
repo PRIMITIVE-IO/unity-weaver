@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
@@ -23,11 +23,11 @@ namespace Weaver.Editor.Inspectors
             {
                 cachedContent = new GUIContent();
 
-                Texture2D altTexutre = new Texture2D(1, 1);
+                Texture2D altTexutre = new(1, 1);
                 altTexutre.SetPixel(0, 0, new Color32(126, 126, 126, 50));
                 altTexutre.Apply();
 
-                Texture2D selectedTexture = new Texture2D(1, 1);
+                Texture2D selectedTexture = new(1, 1);
                 selectedTexture.SetPixel(0, 0, new Color32(0, 140, 255, 40));
                 selectedTexture.Apply();
 
@@ -258,6 +258,7 @@ namespace Weaver.Editor.Inspectors
                     ApplyModifiedProperties();
                 }
             }
+
             GUILayout.Label("Log", EditorStyles.boldLabel);
             DrawLogs();
         }
@@ -346,7 +347,7 @@ namespace Weaver.Editor.Inspectors
 
         void OnWeavedAssemblyElementAdded(ReorderableList list)
         {
-            GenericMenu menu = new GenericMenu();
+            GenericMenu menu = new();
 
             IList<Assembly> cachedAssemblies = AssemblyUtility.GetUserCachedAssemblies();
 
@@ -365,7 +366,7 @@ namespace Weaver.Editor.Inspectors
                 }
                 if (!foundMatch)
                 {
-                    GUIContent content = new GUIContent(cachedAssemblies[x].GetName().Name);
+                    GUIContent content = new(cachedAssemblies[x].GetName().Name);
                     string projectPath = FileUtility.SystemToProjectPath(cachedAssemblies[x].Location);
                     menu.AddItem(content, false, OnWeavedAssemblyAdded, projectPath);
                 }

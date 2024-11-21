@@ -50,7 +50,7 @@ namespace Weaver.Editor
             }
 
             string cs = $"URI=file:{dbPath}";
-            conn = new(cs);
+            conn = new SqliteConnection(cs);
             conn.Open();
             CreateTables();
         }

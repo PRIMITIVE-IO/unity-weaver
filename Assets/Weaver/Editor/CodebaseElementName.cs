@@ -165,7 +165,7 @@ namespace Weaver.Editor
                 classNameString = signature[(signature.LastIndexOf('.') + 1)..];
             }
 
-            PackageName packageName = new PackageName(packageNameString);
+            PackageName packageName = new(packageNameString);
 
             return new ClassName(
                 new FileName(string.Empty),

@@ -8,6 +8,7 @@ Add excluded methods and classes in WeaverSettings as well
 
 IMPORTANT: TO SUCCESSFULLY TRACE, CODE IN THE MAIN ASSEMBLY NEEDS TO BE CHANGED AND SAVED ON EVERY RUN, BECAUSE THE ASSEMBLY GETS CACHED.
 
+IMPORTANT: mono.cecil package MUST BE 1.10.2. later versions have system dll conflict with Unity
 
 # Weaver
 A a code weaver built for use in [Unity Engine](https://unity3d.com/). Based very heavily off of [Fody](https://github.com/Fody/Fody). Implmented using [Mono.Cecil](http://www.mono-project.com/docs/tools+libraries/libraries/Mono.Cecil/).

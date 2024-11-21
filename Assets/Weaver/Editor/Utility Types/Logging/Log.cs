@@ -25,7 +25,7 @@ namespace Weaver.Editor.Utility_Types.Logging
         ILogable m_Context;
         [SerializeField]
         [UsedImplicitly]
-        List<Entry> m_Entries = new List<Entry>();
+        List<Entry> m_Entries = new();
 
         public List<Entry> entries => m_Entries;
 
@@ -113,7 +113,7 @@ namespace Weaver.Editor.Utility_Types.Logging
         void AddEntry(string context, string message, MessageType logType, int stackFrameDiscard)
         {
             // Get our stack frame
-            StackFrame frame = new StackFrame(stackFrameDiscard, true);
+            StackFrame frame = new(stackFrameDiscard, true);
             // Create our entry
             if (string.IsNullOrEmpty(context))
             {
@@ -121,7 +121,7 @@ namespace Weaver.Editor.Utility_Types.Logging
             }
             int lineNumber = frame.GetFileLineNumber();
             message = FormatLabel(message, context, frame.GetFileLineNumber(), logType);
-            Entry entry = new Entry()
+            Entry entry = new()
             {
                 fileName = frame.GetFileName(),
                 lineNumber = lineNumber,

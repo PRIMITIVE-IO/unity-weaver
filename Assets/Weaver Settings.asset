@@ -15,7 +15,7 @@ MonoBehaviour:
   m_RequiredScriptingSymbols:
     value: 
     m_IsActive: 1
-  m_PathToOutput: C:\Users\john\Desktop\weaver-test.db
+  m_PathToOutput: 
   m_WeavedAssemblies:
   - m_RelativePath: Library\ScriptAssemblies\Assembly-CSharp.dll
     m_IsActive: 1

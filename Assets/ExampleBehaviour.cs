@@ -5,7 +5,6 @@ public class ExampleBehaviour : MonoBehaviour
 {
     void Other()
     {
-        var x = 1;
         long count = 0;
         for (int ii = 0; ii < 100000000; ii++)
         {
@@ -26,6 +25,8 @@ public class ExampleBehaviour : MonoBehaviour
     {
         Other();
         Other2();
-        ExampleClass exampleClass = new ExampleClass();
+        ExampleClass exampleClass = new();
+
+        var x = 1;
     }
 }
