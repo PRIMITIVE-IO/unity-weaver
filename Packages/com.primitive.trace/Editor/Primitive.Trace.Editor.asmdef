@@ -1,0 +1,18 @@
+{
+    "name": "Primitive.Trace.Editor",
+    "rootNamespace": "Primitive.Trace.Editor",
+    "references": [
+        "Primitive.Trace"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

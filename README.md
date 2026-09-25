@@ -1,3 +1,13 @@
+## Primitive Trace for Unity (current)
+
+**[Packages/com.primitive.trace](Packages/com.primitive.trace/README.md)** traces a Unity project for Primitive today:
+an IL post-processor instruments the project's assemblies while `PRIMITIVE_TRACE` is defined and play mode startup is
+recorded as primitive-trace JSONL, which the Primitive proxy plays over the project's codemap. Add it to a project with
+`"com.primitive.trace": "file:../../unity-weaver/Packages/com.primitive.trace"` and use **Primitive > Trace > Record
+Startup**. It shares its runtime and weaver with the .NET tracer (fody-dotnet-trace), and replaces everything below.
+
+## The original weaver (superseded)
+
 This codebase has been modified and customized to trace runtime methods and save them to a sqlite database. This database can then be processed and visualized in the Primitive VR IDE https://primitive.io  
 
 Include the entire Assets/Weaver folder in your Unity project (should work with all versions). Also include Mono.Data.Sqlite.dlls and make sure that com.unity.nuget.mono-cecil (latest 1.11.4) is included in Packages/manifest.json
