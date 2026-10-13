@@ -38,3 +38,6 @@ Assembly-CSharp\.csproj
 *.csproj
 
 .idea
+# Editor / IDE files
+.vscode/
+*.slnx

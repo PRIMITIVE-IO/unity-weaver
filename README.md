@@ -10,7 +10,7 @@ Startup**. It shares its runtime and weaver with the .NET tracer (fody-dotnet-tr
 
 This codebase has been modified and customized to trace runtime methods and save them to a sqlite database. This database can then be processed and visualized in the Primitive VR IDE https://primitive.io  
 
-Include the entire Assets/Weaver folder in your Unity project (should work with all versions). Also include Mono.Data.Sqlite.dlls and make sure that com.unity.nuget.mono-cecil (latest 1.11.4) is included in Packages/manifest.json
+Include the entire Assets/Weaver folder in your Unity project (should work with all versions). Also include Mono.Data.Sqlite.dlls and make sure that com.unity.nuget.mono-cecil (1.11.6, the minimum Unity 6000.6 allows) is included in Packages/manifest.json
 
 Place the output db path in the WeaverSettings object.  
 
@@ -18,7 +18,7 @@ Add excluded methods and classes in WeaverSettings as well
 
 IMPORTANT: TO SUCCESSFULLY TRACE, CODE IN THE MAIN ASSEMBLY NEEDS TO BE CHANGED AND SAVED ON EVERY RUN, BECAUSE THE ASSEMBLY GETS CACHED.
 
-IMPORTANT: mono.cecil package MUST BE 1.10.2. later versions have system dll conflict with Unity
+Unity: the project targets Unity 6000.6.5f1. The old 1.10.2 pin on com.unity.nuget.mono-cecil no longer applies: Unity 6000.6 requires 1.11.6 or later, and com.primitive.trace needs 1.11.4+.
 
 # Weaver
 A a code weaver built for use in [Unity Engine](https://unity3d.com/). Based very heavily off of [Fody](https://github.com/Fody/Fody). Implmented using [Mono.Cecil](http://www.mono-project.com/docs/tools+libraries/libraries/Mono.Cecil/).
