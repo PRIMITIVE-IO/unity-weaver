@@ -10,7 +10,6 @@ using UnityEditor.Callbacks;
 using UnityEditor.Compilation;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Weaver.Editor.Resolver;
 using Weaver.Editor.Utility_Types.Logging;
 using Object = UnityEngine.Object;
 
@@ -203,17 +202,17 @@ namespace Weaver.Editor.Settings
         /// Returns back an instance of our symbol reader for  
         /// </summary> 
         /// <returns></returns> 
-        static ReaderParameters GetReaderParameters()
-        {
-            return new ReaderParameters()
-            {
-                ReadingMode = ReadingMode.Immediate,
-                ReadWrite = true,
-                AssemblyResolver = new WeaverAssemblyResolver(),
-                ReadSymbols = true,
-                SymbolReaderProvider = new PdbReaderProvider()
-            };
-        }
+        private static ReaderParameters GetReaderParameters(string assemblyPath)  
+        {  
+            return new ReaderParameters()  
+            {  
+                ReadingMode = ReadingMode.Immediate,  
+                ReadWrite = true,  
+                AssemblyResolver = new WeaverAssemblyResolver(assemblyPath),  
+                ReadSymbols = true,  
+                SymbolReaderProvider = new PdbReaderProvider()  
+            };  
+        }  
 
         /// <summary> 
         /// Returns back the instance of the symbol writer provide. 
@@ -236,6 +235,10 @@ namespace Weaver.Editor.Settings
             {
                 return;
             }
+
+            if (!this.m_WeavedAssemblies.Any(x =>
+                    Path.GetFileName(x.GetSystemPath()) == Path.GetFileName(assemblyPath)))
+                return;
 
             string name = Path.GetFileNameWithoutExtension(assemblyPath);
 
@@ -263,7 +266,7 @@ namespace Weaver.Editor.Settings
             using (FileStream assemblyStream = new(assemblyPath, FileMode.Open, FileAccess.ReadWrite))
             {
                 using (ModuleDefinition moduleDefinition =
-                       ModuleDefinition.ReadModule(assemblyStream, GetReaderParameters()))
+                       ModuleDefinition.ReadModule(assemblyStream, GetReaderParameters(assemblyPath)))
                 {
                     m_Components.Initialize(this);
 

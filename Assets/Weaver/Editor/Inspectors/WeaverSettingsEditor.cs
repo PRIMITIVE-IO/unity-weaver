@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
@@ -250,8 +250,6 @@ namespace Weaver.Editor.Inspectors
             {
                 _hasModifiedProperties = true;
             }
-            GUILayout.Label("Log", EditorStyles.boldLabel);
-            DrawLogs();
 
             if (_hasModifiedProperties)
             {
@@ -260,6 +258,9 @@ namespace Weaver.Editor.Inspectors
                     ApplyModifiedProperties();
                 }
             }
+
+            GUILayout.Label("Log", EditorStyles.boldLabel);
+            DrawLogs();
         }
 
         void ApplyModifiedProperties()

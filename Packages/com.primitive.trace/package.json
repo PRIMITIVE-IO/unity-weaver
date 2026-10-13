@@ -1,0 +1,13 @@
+{
+  "name": "com.primitive.trace",
+  "displayName": "Primitive Trace",
+  "version": "1.0.0",
+  "unity": "6000.0",
+  "description": "Traces a Unity project for Primitive: an IL post-processor instruments the project's assemblies (while the PRIMITIVE_TRACE define is set) and play mode startup is recorded as primitive-trace JSONL, which the Primitive proxy shows in the world. Menu: Primitive > Trace.",
+  "dependencies": {
+    "com.unity.nuget.mono-cecil": "1.11.4"
+  },
+  "author": {
+    "name": "Primitive.io"
+  }
+}
